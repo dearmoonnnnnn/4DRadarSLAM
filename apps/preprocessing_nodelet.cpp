@@ -41,6 +41,7 @@
 
 using namespace std;
 
+//定义命名空间
 namespace radar_graph_slam {
 
 class PreprocessingNodelet : public nodelet::Nodelet, public ParamServer {
