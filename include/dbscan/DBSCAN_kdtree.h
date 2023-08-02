@@ -15,7 +15,7 @@ protected:
         int index, double radius, std::vector<int> &k_indices,
         std::vector<float> &k_sqr_distances) const
     {
-        // this->search_method->radiusSearch调用父类DBSCANSimpleCluster的同名函数，实现了对父类函数的重写
+        // this->search_method_->radiusSearch调用父类DBSCANSimpleCluster的同名函数，实现了对父类函数的重写
         return this->search_method_->radiusSearch(index, radius, k_indices, k_sqr_distances);
     }
 
