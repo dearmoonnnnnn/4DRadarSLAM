@@ -41,9 +41,10 @@
 
 using namespace std;
 
-//定义命名空间
+//定义命名空间，里面只有一个类：PreprocessingNodelet
 namespace radar_graph_slam {
 
+//定义预处理节点
 class PreprocessingNodelet : public nodelet::Nodelet, public ParamServer {
 public: 
   // typedef pcl::PointXYZI PointT;
