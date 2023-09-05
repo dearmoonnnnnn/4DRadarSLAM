@@ -266,6 +266,7 @@ private:
     }
   }
 
+  //回调函数，处理sensor_msgs::PointCloud消息类型的数据
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
     
     RadarPointCloudType radarpoint_raw;
