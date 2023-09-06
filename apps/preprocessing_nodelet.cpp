@@ -270,6 +270,8 @@ private:
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
     // 定义两种不同的点云类型和它们的指针
+    // radarpoint_raw ：包含点云xyz坐标，强度和多普勒速度
+    // radarpoint_xyzi: 包含点云xyz坐标，强度
     RadarPointCloudType radarpoint_raw;
     PointT radarpoint_xyzi;
     pcl::PointCloud<RadarPointCloudType>::Ptr radarcloud_raw( new pcl::PointCloud<RadarPointCloudType> );
@@ -299,6 +301,7 @@ private:
             radarpoint_xyzi.z = dstMat.at<double>(2,0);
             radarpoint_xyzi.intensity = eagle_msg->channels[2].values[i];
 
+            // 将点添加到点云中
             radarcloud_raw->points.push_back(radarpoint_raw);
             radarcloud_xyzi->points.push_back(radarpoint_xyzi);
         }
