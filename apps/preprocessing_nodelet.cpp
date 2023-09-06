@@ -280,6 +280,10 @@ private:
     radarcloud_xyzi->header.frame_id = baselinkFrame;
     radarcloud_xyzi->header.seq = eagle_msg->header.seq;
     radarcloud_xyzi->header.stamp = eagle_msg->header.stamp.toSec() * 1e6;
+
+    // 遍历每一个点，i表示点
+    // channels[2].value[i]表示点i的信号强度
+    // channels[0].value[i]表示点i的多普勒速度
     for(int i = 0; i < eagle_msg->points.size(); i++)
     {
         // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
