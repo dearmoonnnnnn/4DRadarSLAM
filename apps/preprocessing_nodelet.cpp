@@ -41,7 +41,7 @@
 
 using namespace std;
 
-//定义命名空间，里面只有一个类：PreprocessingNodelet
+//定义命名空间，里面只有三个类：PreprocessingNodelet、radar_graph_slam_nodelet、scan_matching_odometry_nodelet
 namespace radar_graph_slam {
 
 //定义预处理节点
