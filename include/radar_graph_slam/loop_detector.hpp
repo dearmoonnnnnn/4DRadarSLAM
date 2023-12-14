@@ -19,6 +19,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 
+#include <mutex>                 // 源项目没有这个，导致报错， 太坑啦
+
 using namespace std;
 
 namespace radar_graph_slam {
