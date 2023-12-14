@@ -1,4 +1,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
+
+set(CMAKE_CXX_STANDARD 14)  # 使用 C++14 标准
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 cmake_minimum_required(VERSION 2.8.3)
 project(radar_graph_slam)
 
