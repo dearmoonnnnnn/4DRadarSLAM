@@ -93,8 +93,8 @@ public:
 
 // nodolet初始化时被调用，是nodelet生命周期回调函数
   virtual void onInit() {
-    nh = getNodeHandle();                                                                            // 全局节点句柄
-    mt_nh = getMTNodeHandle();                                                             // 多线程节点句柄
+    nh = getNodeHandle();                                                           // 全局节点句柄
+    mt_nh = getMTNodeHandle();                                                      // 多线程节点句柄
     private_nh = getPrivateNodeHandle();                                            // 私有节点句柄
 
     // init parameters
@@ -203,16 +203,16 @@ private:
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
     const ros::Time& stamp = cloud_msg->header.stamp;
     Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                    // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
-    Eigen::Matrix4d matrix_map2base;                                                                            // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系
+    Eigen::Matrix4d matrix_map2base;                                         // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系
    
     // Publish TF between /map and /base_link
     if(keyframes.size() > 0)
     {
-      const KeyFrame::Ptr& keyframe_last = keyframes.back();                                                                                                                                     // 获取最后一个关键帧
+      const KeyFrame::Ptr& keyframe_last = keyframes.back();                                                                          // 获取最后一个关键帧
       Eigen::Isometry3d lastkeyframe_odom_incre =  keyframe_last->odom_scan2scan.inverse() * odom_now;                                // 当前里程计和最后一个关键帧之间的变换矩阵
-      Eigen::Isometry3d keyframe_map2base_matrix = keyframe_last->node->estimate();                                                                            // 获取最后一个关键帧节点上估计的地图到基座的变换矩阵
+      Eigen::Isometry3d keyframe_map2base_matrix = keyframe_last->node->estimate();                                                   // 获取最后一个关键帧节点上估计的地图到基座的变换矩阵
       // map2base = odom^(-1) * base
-      matrix_map2base = (keyframe_map2base_matrix * lastkeyframe_odom_incre).matrix();                                                                   // 最终得到当前帧'\map'到基座'\base_link'之间的变换矩阵 = 当前帧与上一个关键帧的变换矩阵 * 上一个关键帧与基座的变换矩阵
+      matrix_map2base = (keyframe_map2base_matrix * lastkeyframe_odom_incre).matrix();                                                // 最终得到当前帧'\map'到基座'\base_link'之间的变换矩阵 = 当前帧与上一个关键帧的变换矩阵 * 上一个关键帧与基座的变换矩阵
     }
     geometry_msgs::TransformStamped map2base_trans = matrix2transform(cloud_msg->header.stamp, matrix_map2base, mapFrame, baselinkFrame); // 将得到的变换矩阵转换为geometry_msgs::TransformStamped
     if (pow(map2base_trans.transform.rotation.w,2)+pow(map2base_trans.transform.rotation.x,2)+
