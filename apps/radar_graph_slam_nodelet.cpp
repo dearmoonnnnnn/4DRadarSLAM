@@ -192,7 +192,7 @@ public:
       0.004031,       0.033772,       0.999421,   -6478.377842,
       0.000000,       0.000000,       0.000000,       1.000000;
   }
-
+ 
 
 private:
   /**
@@ -202,23 +202,26 @@ private:
    */
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
     const ros::Time& stamp = cloud_msg->header.stamp;
-    Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                   // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
+    Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                    // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
     Eigen::Matrix4d matrix_map2base;                                                                            // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系
+   
     // Publish TF between /map and /base_link
     if(keyframes.size() > 0)
     {
-      const KeyFrame::Ptr& keyframe_last = keyframes.back();
-      Eigen::Isometry3d lastkeyframe_odom_incre =  keyframe_last->odom_scan2scan.inverse() * odom_now;
-      Eigen::Isometry3d keyframe_map2base_matrix = keyframe_last->node->estimate();
+      const KeyFrame::Ptr& keyframe_last = keyframes.back();                                                                                                                                     // 获取最后一个关键帧
+      Eigen::Isometry3d lastkeyframe_odom_incre =  keyframe_last->odom_scan2scan.inverse() * odom_now;                                // 当前里程计和最后一个关键帧之间的变换矩阵
+      Eigen::Isometry3d keyframe_map2base_matrix = keyframe_last->node->estimate();                                                                            // 获取最后一个关键帧节点上估计的地图到基座的变换矩阵
       // map2base = odom^(-1) * base
-      matrix_map2base = (keyframe_map2base_matrix * lastkeyframe_odom_incre).matrix();
+      matrix_map2base = (keyframe_map2base_matrix * lastkeyframe_odom_incre).matrix();                                                                   // 最终得到当前帧'\map'到基座'\base_link'之间的变换矩阵 = 当前帧与上一个关键帧的变换矩阵 * 上一个关键帧与基座的变换矩阵
     }
-    geometry_msgs::TransformStamped map2base_trans = matrix2transform(cloud_msg->header.stamp, matrix_map2base, mapFrame, baselinkFrame);
+    geometry_msgs::TransformStamped map2base_trans = matrix2transform(cloud_msg->header.stamp, matrix_map2base, mapFrame, baselinkFrame); // 将得到的变换矩阵转换为geometry_msgs::TransformStamped
     if (pow(map2base_trans.transform.rotation.w,2)+pow(map2base_trans.transform.rotation.x,2)+
       pow(map2base_trans.transform.rotation.y,2)+pow(map2base_trans.transform.rotation.z,2) < pow(0.9,2)) 
-      {map2base_trans.transform.rotation.w=1; map2base_trans.transform.rotation.x=0; map2base_trans.transform.rotation.y=0; map2base_trans.transform.rotation.z=0;}
+      {map2base_trans.transform.rotation.w=1; map2base_trans.transform.rotation.x=0; map2base_trans.transform.rotation.y=0; map2base_trans.transform.rotation.z=0;} // 检查旋转部分是否合法
     map2base_broadcaster.sendTransform(map2base_trans);
-   
+   // Publish TF between /map and /base_link END
+
+
     pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
     pcl::fromROSMsg(*cloud_msg, *cloud);
     if(baselinkFrame.empty()) {
