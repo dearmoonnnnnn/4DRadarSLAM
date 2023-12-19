@@ -76,23 +76,30 @@ using namespace std;
 
 namespace radar_graph_slam {
 
-class RadarGraphSlamNodelet : public nodelet::Nodelet, public ParamServer {
+// 定义类RadarGraphSlamNodelet,  继承自nodelet::Nodelet和ParamServer
+class RadarGraphSlamNodelet : public nodelet::Nodelet, public ParamServer {                 
 public:
-  typedef pcl::PointXYZI PointT;
-  typedef PointXYZIRPYT  PointTypePose;
+// 三个类型别名：
+// 在pcl库中定义的数据结构，可能是一个包含位置(x，y，z)和intensity信息的点
+// 在Scancontext.h中定义的数据结构，可能是一个包含位置(x,y,z)和intensity，以及欧拉角(roll,pitch,yaw)信息的点
+// 表示一个消息过滤器(message_filters) 的同步策略类型
+  typedef pcl::PointXYZI PointT;                                  
+  typedef PointXYZIRPYT  PointTypePose;             
   typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry, sensor_msgs::PointCloud2> ApproxSyncPolicy;
 
   RadarGraphSlamNodelet() {}
   virtual ~RadarGraphSlamNodelet() {}
 
+
+// nodolet初始化时被调用，是nodelet生命周期回调函数
   virtual void onInit() {
-    nh = getNodeHandle();
-    mt_nh = getMTNodeHandle();
-    private_nh = getPrivateNodeHandle();
+    nh = getNodeHandle();                                                                            // 全局节点句柄
+    mt_nh = getMTNodeHandle();                                                             // 多线程节点句柄
+    private_nh = getPrivateNodeHandle();                                            // 私有节点句柄
 
     // init parameters
     map_cloud_resolution = private_nh.param<double>("map_cloud_resolution", 0.05);
-    trans_odom2map.setIdentity();
+    trans_odom2map.setIdentity();                                                         // 设置为单位矩阵
     trans_aftmapped.setIdentity();
     trans_aftmapped_incremental.setIdentity();
     initial_pose.setIdentity();
@@ -195,8 +202,8 @@ private:
    */
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
     const ros::Time& stamp = cloud_msg->header.stamp;
-    Eigen::Isometry3d odom_now = odom2isometry(odom_msg);
-    Eigen::Matrix4d matrix_map2base;
+    Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                   // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
+    Eigen::Matrix4d matrix_map2base;                                                                            // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系
     // Publish TF between /map and /base_link
     if(keyframes.size() > 0)
     {
