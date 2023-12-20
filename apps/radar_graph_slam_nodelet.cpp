@@ -99,7 +99,7 @@ public:
 
     // init parameters
     map_cloud_resolution = private_nh.param<double>("map_cloud_resolution", 0.05);
-    trans_odom2map.setIdentity();                                                         // 设置为单位矩阵
+    trans_odom2map.setIdentity();                                                   // 设置为单位矩阵
     trans_aftmapped.setIdentity();
     trans_aftmapped_incremental.setIdentity();
     initial_pose.setIdentity();
@@ -222,17 +222,18 @@ private:
    // Publish TF between /map and /base_link END
 
 
-    pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
-    pcl::fromROSMsg(*cloud_msg, *cloud);
-    if(baselinkFrame.empty()) {
+    pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());      // pcl点云指针 cloud
+    pcl::fromROSMsg(*cloud_msg, *cloud);                                    // 将ros点云消息转换为pcl点云，为了允许pcl库中使用ROS中定义的点云消息
+    if(baselinkFrame.empty()) {                                             // baselinkFrame为机器人基座坐标系的标识符。检测到为空时，将其设置为点云消息的帧ID
       baselinkFrame = cloud_msg->header.frame_id;
     }
     
-    // Push ego velocity to queue
+    // Push ego velocity to queue  将机器人的速度信息存储到一个队列twist_queue中
+    // 创建TwistStamped类型的智能指针twist_ , TwistStamped包含线速度和角速度，并附带时间戳
     geometry_msgs::TwistStamped::Ptr twist_(new geometry_msgs::TwistStamped);
     twist_->header.stamp = cloud_msg->header.stamp;
     twist_->twist.linear = odom_msg->twist.twist.linear;
-    {
+    {                                                                 
       std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
       twist_queue.push_back(twist_);
     }
