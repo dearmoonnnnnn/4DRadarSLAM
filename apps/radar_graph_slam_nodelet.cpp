@@ -280,7 +280,7 @@ private:
     keyframe_queue.push_back(keyframe);
     //********** END **********
 
-    
+
     // Scan Context loop detector - giseop
     // - SINGLE_SCAN_FULL: using downsampled original point cloud (/full_cloud_projected + downsampling)
     // - SINGLE_SCAN_FEAT: using surface feature as an input point cloud for scan context (2020.04.01: checked it works.)
@@ -303,9 +303,10 @@ private:
     lastKeyframeTime = thisKeyframeTime;
   }
 
-
+  // 根据IMU数据的四元数部分计算初始的机器人初始位姿矩阵`initial_pose`
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
     // Transform to Radar's Frame
+    // 从imu数据中获取四元数，并进行坐标系变换
     geometry_msgs::QuaternionStamped::Ptr imu_quat(new geometry_msgs::QuaternionStamped);
     imu_quat->quaternion = imu_odom_msg->orientation;
     Eigen::Quaterniond imu_quat_from(imu_quat->quaternion.w, imu_quat->quaternion.x, imu_quat->quaternion.y, imu_quat->quaternion.z);
@@ -317,18 +318,19 @@ private:
       double roll, pitch, yaw;
       tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w());
       tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation);
-      tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
+      tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);                                        // 将坐标变换后的四元数`imu_quat_deskew`转换为欧拉角，用于后续构造旋转旋转矩阵
       // Eigen::Matrix3d imu_mat_deskew = imu_quat_deskew.toRotationMatrix();
       // Eigen::Vector3d eulerAngle = imu_mat_deskew.eulerAngles(0,1,2); // roll pitch yaw
       Eigen::AngleAxisd rollAngle(AngleAxisd(roll,Vector3d::UnitX()));
       Eigen::AngleAxisd pitchAngle(AngleAxisd(pitch,Vector3d::UnitY()));
       Eigen::AngleAxisd yawAngle(AngleAxisd(0.0,Vector3d::UnitZ()));
-      Eigen::Matrix3d imu_mat_final; imu_mat_final = yawAngle * pitchAngle * rollAngle;
+      Eigen::Matrix3d imu_mat_final; imu_mat_final = yawAngle * pitchAngle * rollAngle;           // 使用欧拉角构造最终的旋转矩阵`imu_mat_final`
 
-      Eigen::Isometry3d isom_initial_pose;
+      // 将旋转矩阵赋值给`iso_initial_pose`，然后将其转换为初始位姿矩阵`initial_pose`
+      Eigen::Isometry3d isom_initial_pose;                                                        
       isom_initial_pose.setIdentity();
       isom_initial_pose.rotate(imu_mat_final); // Set rotation
-      initial_pose = isom_initial_pose.matrix();
+      initial_pose = isom_initial_pose.matrix();                                                  // 初始位姿矩阵
       ROS_INFO("Initial Position Matrix = ");
       std::cout << 
         initial_pose(0,0) << ", " << initial_pose(0,1) << ", " << initial_pose(0,2) << ", " << initial_pose(0,3) << ", " << std::endl <<
