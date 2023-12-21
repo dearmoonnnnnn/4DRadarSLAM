@@ -233,8 +233,8 @@ private:
     geometry_msgs::TwistStamped::Ptr twist_(new geometry_msgs::TwistStamped);
     twist_->header.stamp = cloud_msg->header.stamp;                          // 时间戳
     twist_->twist.linear = odom_msg->twist.twist.linear;                     // 线速度信息
-    {                                                                 
-      std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
+    {                                                                        // 将消息放入队列
+      std::lock_guard<std::mutex> lock(keyframe_queue_mutex);                // 使用了std::lock_guard来确保对twist_queue的访问是线程安全的
       twist_queue.push_back(twist_);
     }
 
