@@ -230,6 +230,7 @@ private:
     
     // Push ego velocity to queue  将机器人的速度信息存储到一个队列twist_queue中
     // 创建TwistStamped类型的智能指针twist_ , TwistStamped包含线速度和角速度，并附带时间戳
+    // 将速度存储到队列中，便于后续的轨迹估计、运动模型更新等
     geometry_msgs::TwistStamped::Ptr twist_(new geometry_msgs::TwistStamped);
     twist_->header.stamp = cloud_msg->header.stamp;                          // 时间戳
     twist_->twist.linear = odom_msg->twist.twist.linear;                     // 线速度信息
@@ -243,10 +244,10 @@ private:
       std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
       if(keyframe_queue.empty()) {
         std_msgs::Header read_until;
-        read_until.stamp = stamp + ros::Duration(10, 0);
-        read_until.frame_id = points_topic;
-        read_until_pub.publish(read_until);
-        read_until.frame_id = "/filtered_points";
+        read_until.stamp = stamp + ros::Duration(10, 0);                      // 消息头的时间戳设置为当前帧的时间戳加上十秒，目的是指示其他组件应该读取并处理从当前时刻起的未来10秒的数据
+        read_until.frame_id = points_topic;                                   // 设置帧ID
+        read_until_pub.publish(read_until);                                   // 发布read_until
+        read_until.frame_id = "/filtered_points";                             // 修改帧ID并再次发布
         read_until_pub.publish(read_until);
       }
       return;
@@ -254,16 +255,16 @@ private:
     // Get time of this key frame for Intergeration, to integerate between two key frames
     thisKeyframeTime = cloud_msg->header.stamp.toSec();
     
-    double accum_d = keyframe_updater->get_accum_distance();
+    double accum_d = keyframe_updater->get_accum_distance();                  // 获取累积的距离，即机器人移动的总距离
     // Construct keyframe
-    KeyFrame::Ptr keyframe(new KeyFrame(keyframe_index, stamp, odom_now, accum_d, cloud));
-    keyframe_index ++;
+    KeyFrame::Ptr keyframe(new KeyFrame(keyframe_index, stamp, odom_now, accum_d, cloud));  // 构造关键帧
+    keyframe_index ++;                                                                      // 关键帧索引，每个关键帧对应一个唯一的索引
 
     if (enable_preintegration){
       // Intergerate translation of ego velocity, add rotation
-      geometry_msgs::Transform transf_integ = preIntegrationTransform();
+      geometry_msgs::Transform transf_integ = preIntegrationTransform();                    // 获取预积分得到的变换信息，包括旋转和平移
       static uint32_t sequ = 0;
-      nav_msgs::Odometry odom_frame2frame;
+      nav_msgs::Odometry odom_frame2frame;                                                  // 构造nav_msgs::Odometry 消息，这个消息通常用于发布相邻关键帧之间的运动信息
       odom_frame2frame.pose.pose.orientation = transf_integ.rotation;
       odom_frame2frame.pose.pose.position.x = transf_integ.translation.x;
       odom_frame2frame.pose.pose.position.y = transf_integ.translation.y;
@@ -272,12 +273,14 @@ private:
       odom_frame2frame.header.stamp = cloud_msg->header.stamp;
       odom_frame2frame.header.seq = sequ; sequ ++;
       odom_frame2frame_pub.publish(odom_frame2frame);
-      keyframe->trans_integrated = transf_integ;
+      keyframe->trans_integrated = transf_integ;                                             // 将预积分的变换信息存储到关键帧对象
     }
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue.push_back(keyframe);
+    //********** END **********
 
+    
     // Scan Context loop detector - giseop
     // - SINGLE_SCAN_FULL: using downsampled original point cloud (/full_cloud_projected + downsampling)
     // - SINGLE_SCAN_FEAT: using surface feature as an input point cloud for scan context (2020.04.01: checked it works.)
