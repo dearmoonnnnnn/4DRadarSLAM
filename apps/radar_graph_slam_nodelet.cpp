@@ -231,8 +231,8 @@ private:
     // Push ego velocity to queue  将机器人的速度信息存储到一个队列twist_queue中
     // 创建TwistStamped类型的智能指针twist_ , TwistStamped包含线速度和角速度，并附带时间戳
     geometry_msgs::TwistStamped::Ptr twist_(new geometry_msgs::TwistStamped);
-    twist_->header.stamp = cloud_msg->header.stamp;
-    twist_->twist.linear = odom_msg->twist.twist.linear;
+    twist_->header.stamp = cloud_msg->header.stamp;                          // 时间戳
+    twist_->twist.linear = odom_msg->twist.twist.linear;                     // 线速度信息
     {                                                                 
       std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
       twist_queue.push_back(twist_);
