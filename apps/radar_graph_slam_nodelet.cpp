@@ -341,6 +341,8 @@ private:
     }
   }
 
+
+  // 接收imu和里程计融合的消息，并将其存储在imu_odom_queue队列中
   void imu_odom_callback(const nav_msgs::OdometryConstPtr& imu_odom_msg) {
     {
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
@@ -348,13 +350,14 @@ private:
     }
   }
 
+  // 计算两个关键帧之间的变换
   geometry_msgs::Transform preIntegrationTransform(){
-    double lastImuOdomQT = -1;
+    double lastImuOdomQT = -1;                                                  // 队列中最早imu-odom消息的时间戳
     // double lastTwistQT = -1;
-    double delta_t = 0;
+    double delta_t = 0;                                                         // 时间差
     size_t imu_odom_end_index = 0; // The index of the last used IMU odom
     geometry_msgs::Transform trans_; // Transform to return
-    // pop old IMU orientation message
+    // pop old IMU orientation message  时间差大于阈值，弹出最早的消息           
     while (!imu_odom_queue.empty() && imu_odom_queue.front()->header.stamp.toSec() < lastKeyframeTime - delta_t){
         lastImuOdomQT = imu_odom_queue.front()->header.stamp.toSec();
         imu_odom_queue.pop_front();
@@ -364,7 +367,7 @@ private:
         // lastTwistQT = twist_queue.front()->header.stamp.toSec();
         twist_queue.pop_front();
     }
-    // repropogate
+    // repropogate  重新传播
     Eigen::Isometry3d isom_frame2frame;  // Translation increment between last key frame and this IMU msg
     Eigen::Isometry3d isometry_rotation; // Rotation of IMU odom
     Eigen::Isometry3d isometry_translation;  // Translation of IMU odom
@@ -378,15 +381,18 @@ private:
         if (imu_odom_queue.at(i)->header.stamp.toSec() < thisKeyframeTime)
           imu_odom_end_index = i;
       }
-      std::unique_ptr<CubicInterpolation> egovelIntegratorX;
+      // 声明三个方向上的速度插值器
+      std::unique_ptr<CubicInterpolation> egovelIntegratorX;                    
       std::unique_ptr<CubicInterpolation> egovelIntegratorY;
       std::unique_ptr<CubicInterpolation> egovelIntegratorZ;
-      if (use_egovel_preinteg_trans) {
+      if (use_egovel_preinteg_trans) {                                                            // 是否使用速度作为位移的积分
         // integrate imu message from the beginning of this optimization
         size_t twist_length = twist_queue.size();
         Eigen::MatrixXd q_via_x(twist_length,3),q_via_y(twist_length,3),q_via_z(twist_length,3);
         Eigen::VectorXd t_via_x(twist_length),t_via_y(twist_length),t_via_z(twist_length);
         // double dt = 1.0/12;
+
+        // 遍历速度消息队列，获取x，y，z三个方向上的速度信息和时间戳
         for (size_t i=0; i < twist_length; i++){
           q_via_x(i, 0) = twist_queue.at(i)->twist.linear.x;  q_via_x(i, 1) = 0;  q_via_x(i, 2) = 0;
           // acc: q(i,1)=(twist_queue.at(i+1).twist.linear.x - twist_queue.at(i).twist.linear.x) / dt;
@@ -396,13 +402,17 @@ private:
           q_via_z(i, 0) = twist_queue.at(i)->twist.linear.z;  q_via_z(i, 1) = 0;  q_via_z(i, 2) = 0;
           t_via_z(i) = t_via_x(i);
         }
+
+        //对三个方向上的速度进行插值
         egovelIntegratorX.reset(new CubicInterpolation(q_via_x, t_via_x)); // Integrator of ego velocity at X axis
         egovelIntegratorY.reset(new CubicInterpolation(q_via_y, t_via_y)); // Integrator of ego velocity at Y axis
         egovelIntegratorZ.reset(new CubicInterpolation(q_via_z, t_via_z)); // Integrator of ego velocity at Z axis
         // ROS_INFO("Twist queue - Start time: %f Stop time: %f", t_via_x(0), t_via_x(t_via_x.size()-1));
       }
-      Eigen::Isometry3d isom_imu_odom_last(Eigen::Isometry3d::Identity());
-      Eigen::Quaterniond q_imu_odom(imu_odom_queue.front()->pose.pose.orientation.w,
+
+      
+      Eigen::Isometry3d isom_imu_odom_last(Eigen::Isometry3d::Identity());                  // 队列中第一个imu-odom消息的位姿信息
+      Eigen::Quaterniond q_imu_odom(imu_odom_queue.front()->pose.pose.orientation.w,        
                                 imu_odom_queue.front()->pose.pose.orientation.x,
                                 imu_odom_queue.front()->pose.pose.orientation.y,
                                 imu_odom_queue.front()->pose.pose.orientation.z);
@@ -410,7 +420,7 @@ private:
       isom_imu_odom_last.pretranslate(Eigen::Vector3d(imu_odom_queue.front()->pose.pose.position.x,
                                                   imu_odom_queue.front()->pose.pose.position.y,
                                                   imu_odom_queue.front()->pose.pose.position.z));
-      Eigen::Isometry3d isom_imu_odom_this(Eigen::Isometry3d::Identity());
+      Eigen::Isometry3d isom_imu_odom_this(Eigen::Isometry3d::Identity());                  // 队列中最后一个imu-odom消息的位姿信息
       q_imu_odom = Eigen::Quaterniond(imu_odom_queue.at(imu_odom_end_index)->pose.pose.orientation.w,
                                 imu_odom_queue.at(imu_odom_end_index)->pose.pose.orientation.x,
                                 imu_odom_queue.at(imu_odom_end_index)->pose.pose.orientation.y,
@@ -419,7 +429,7 @@ private:
       isom_imu_odom_this.pretranslate(Eigen::Vector3d(imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.x,
                                                   imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.y,
                                                   imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.z));
-      Eigen::Isometry3d isom_imu_odom_btn = isom_imu_odom_last.inverse() * isom_imu_odom_this;
+      Eigen::Isometry3d isom_imu_odom_btn = isom_imu_odom_last.inverse() * isom_imu_odom_this; // 计算队列中最后一个
       // cout << isom_imu_odom_btn.matrix() << endl;
       // ROS_INFO("IMU Odom queue - Start time: %f Stop time: %f", imu_odom_queue.at(0)->header.stamp.toSec(), imu_odom_queue.at(imu_odom_end_index)->header.stamp.toSec());
       if (use_egovel_preinteg_trans){ // Use Ego vel as translation integration
