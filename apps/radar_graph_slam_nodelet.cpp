@@ -429,10 +429,11 @@ private:
       isom_imu_odom_this.pretranslate(Eigen::Vector3d(imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.x,
                                                   imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.y,
                                                   imu_odom_queue.at(imu_odom_end_index)->pose.pose.position.z));
-      Eigen::Isometry3d isom_imu_odom_btn = isom_imu_odom_last.inverse() * isom_imu_odom_this; // 计算队列中最后一个
+      Eigen::Isometry3d isom_imu_odom_btn = isom_imu_odom_last.inverse() * isom_imu_odom_this; // 计算队列中最后一个imu-odom消息到第一个imu-odom消息之间的变换
       // cout << isom_imu_odom_btn.matrix() << endl;
       // ROS_INFO("IMU Odom queue - Start time: %f Stop time: %f", imu_odom_queue.at(0)->header.stamp.toSec(), imu_odom_queue.at(imu_odom_end_index)->header.stamp.toSec());
-      if (use_egovel_preinteg_trans){ // Use Ego vel as translation integration
+      
+      if (use_egovel_preinteg_trans){ // Use Ego vel as translation integration  如果速度可用，对imu-odom积分来计算整个队列的位移和旋转
         for (size_t i = 0; i < imu_odom_end_index + 1; i++)
         {
             nav_msgs::Odometry::ConstPtr thisImu = imu_odom_queue.at(i);
@@ -445,25 +446,26 @@ private:
                                                             egovelIntegratorY->getPosition(imuOdomTime),
                                                             egovelIntegratorZ->getPosition(imuOdomTime))* dt;
             isometry_translation.pretranslate(translation_); // Set translation
-            isom_frame2frame = isom_frame2frame.pretranslate(isometry_translation.translation());
+            isom_frame2frame = isom_frame2frame.pretranslate(isometry_translation.translation());       
 
             lastImuOdomQT = imuOdomTime;
         }
       }
-      else {  // Use IMU as translation integration
+      else {  // Use IMU as translation integration   如果不使用ego速度，直接使用isom_imu_odom_btn表示整个队列的变换
         isom_frame2frame = isom_imu_odom_btn;
       }
+      // 将计算得到的整个队列的位移信息和最后一个IMU-odom消息的旋转信息存储到trans_变量中
       translation_frame2frame.x = isom_frame2frame.translation().x();
       translation_frame2frame.y = isom_frame2frame.translation().y();
       translation_frame2frame.z = isom_frame2frame.translation().z();
       const auto& last_imu_orien = imu_odom_queue.at(imu_odom_end_index);
-      trans_.rotation = last_imu_orien->pose.pose.orientation;
-      trans_.translation = translation_frame2frame;
+      trans_.rotation = last_imu_orien->pose.pose.orientation;          // 整个队列的旋转
+      trans_.translation = translation_frame2frame;                     // 整个队列的平移
     }
     return trans_;
   }
 
-
+  // 气压计回函数
   void barometer_callback(const barometer_bmp388::BarometerPtr& baro_msg) {
     if(!enable_barometer) {
       return;
@@ -472,6 +474,7 @@ private:
     barometer_queue.push_back(baro_msg);
   }
 
+  // 将气压计数据和关键帧对齐，从而提供相对于机器人起始点的高度信息
   bool flush_barometer_queue() {
     std::lock_guard<std::mutex> lock(barometer_queue_mutex);
     if(keyframes.empty() || barometer_queue.empty()) {
