@@ -54,30 +54,33 @@ public:
   virtual ~PreprocessingNodelet() {}
 
   virtual void onInit() {
-    nh = getNodeHandle();
-    private_nh = getPrivateNodeHandle();
+    nh = getNodeHandle();                         // 获取节点句柄
+    private_nh = getPrivateNodeHandle();          // 获取私有节点句柄
 
-    initializeTransformation();
-    initializeParams();
+    initializeTransformation();                   // 调用初始化变换的函数
+    initializeParams();                           // 调用初始化参数的函数
 
+    // 订阅点云数据、IMU数据和命令数据
     points_sub = nh.subscribe(pointCloudTopic, 64, &PreprocessingNodelet::cloud_callback, this);
     imu_sub = nh.subscribe(imuTopic, 1, &PreprocessingNodelet::imu_callback, this);
     command_sub = nh.subscribe("/command", 10, &PreprocessingNodelet::command_callback, this);
 
+    // 发布器，发布过滤后的点云、带颜色的点云、IMU数据和Aft-mapped到初始位姿的里程计数据
     points_pub = nh.advertise<sensor_msgs::PointCloud2>("/filtered_points", 32);
     colored_pub = nh.advertise<sensor_msgs::PointCloud2>("/colored_points", 32);
     imu_pub = nh.advertise<sensor_msgs::Imu>("/imu", 32);
     gt_pub = nh.advertise<nav_msgs::Odometry>("/aftmapped_to_init", 16);
   
-    std::string topic_twist = private_nh.param<std::string>("topic_twist", "/eagle_data/twist");
+    // 从ROS参数服务器中获取名为 "topic_twist"等字符串参数的值，如果该参数不存在，则使用默认值 "/eagle_data/twist"等值
+    std::string topic_twist = private_nh.param<std::string>("topic_twist", "/eagle_data/twist");  
     std::string topic_inlier_pc2 = private_nh.param<std::string>("topic_inlier_pc2", "/eagle_data/inlier_pc2");
     std::string topic_outlier_pc2 = private_nh.param<std::string>("topic_outlier_pc2", "/eagle_data/outlier_pc2");
-    pub_twist = nh.advertise<geometry_msgs::TwistWithCovarianceStamped>(topic_twist, 5);
-    pub_inlier_pc2 = nh.advertise<sensor_msgs::PointCloud2>(topic_inlier_pc2, 5);
-    pub_outlier_pc2 = nh.advertise<sensor_msgs::PointCloud2>(topic_outlier_pc2, 5);
-    pc2_raw_pub = nh.advertise<sensor_msgs::PointCloud2>("/eagle_data/pc2_raw",1);
-    enable_dynamic_object_removal = private_nh.param<bool>("enable_dynamic_object_removal", false);
-    power_threshold = private_nh.param<float>("power_threshold", 0);
+    pub_twist = nh.advertise<geometry_msgs::TwistWithCovarianceStamped>(topic_twist, 5);      // Twist
+    pub_inlier_pc2 = nh.advertise<sensor_msgs::PointCloud2>(topic_inlier_pc2, 5);             // 内点点云
+    pub_outlier_pc2 = nh.advertise<sensor_msgs::PointCloud2>(topic_outlier_pc2, 5);           // 外点点云
+    pc2_raw_pub = nh.advertise<sensor_msgs::PointCloud2>("/eagle_data/pc2_raw",1);            // 原始点云
+    enable_dynamic_object_removal = private_nh.param<bool>("enable_dynamic_object_removal", false); //是否启动动态物体去除
+    power_threshold = private_nh.param<float>("power_threshold", 0);                                //功率阈值
   }
 
 private:
@@ -107,19 +110,20 @@ private:
     std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
   }
   void initializeParams() {
+    // 降采样方法、分辨率
     std::string downsample_method = private_nh.param<std::string>("downsample_method", "VOXELGRID");
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
 
     if(downsample_method == "VOXELGRID") {
       std::cout << "downsample: VOXELGRID " << downsample_resolution << std::endl;
-      auto voxelgrid = new pcl::VoxelGrid<PointT>();
-      voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
-      downsample_filter.reset(voxelgrid);
+      auto voxelgrid = new pcl::VoxelGrid<PointT>();                                                  // 创建pcl::VoxelGrid对象，用于进行体素网格降采样
+      voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);    // 设置体素网格的叶子大小，即降采样的分辨率
+      downsample_filter.reset(voxelgrid);                                                             // 将 downsample_filter 重置为新创建的 pcl::VoxelGrid 对象
     } else if(downsample_method == "APPROX_VOXELGRID") {
       std::cout << "downsample: APPROX_VOXELGRID " << downsample_resolution << std::endl;
-      pcl::ApproximateVoxelGrid<PointT>::Ptr approx_voxelgrid(new pcl::ApproximateVoxelGrid<PointT>());
+      pcl::ApproximateVoxelGrid<PointT>::Ptr approx_voxelgrid(new pcl::ApproximateVoxelGrid<PointT>()); // 用于进行近似体素网格降采样
       approx_voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
-      downsample_filter = approx_voxelgrid;
+      downsample_filter = approx_voxelgrid;                                                             // 将downsample_filer赋值为approx_voxelgrid
     } else {
       if(downsample_method != "NONE") {
         std::cerr << "warning: unknown downsampling type (" << downsample_method << ")" << std::endl;
@@ -128,25 +132,28 @@ private:
       std::cout << "downsample: NONE" << std::endl;
     }
 
+    // 去除离群点的方法，可选值为"STATISTICAL"、"RADIUS",即"统计方法"、"半径方法"
     std::string outlier_removal_method = private_nh.param<std::string>("outlier_removal_method", "STATISTICAL");
     if(outlier_removal_method == "STATISTICAL") {
-      int mean_k = private_nh.param<int>("statistical_mean_k", 20);
-      double stddev_mul_thresh = private_nh.param<double>("statistical_stddev", 1.0);
+      int mean_k = private_nh.param<int>("statistical_mean_k", 20);                   // 计算邻域均值的点数
+      double stddev_mul_thresh = private_nh.param<double>("statistical_stddev", 1.0); // 标准差的倍数阈值
       std::cout << "outlier_removal: STATISTICAL " << mean_k << " - " << stddev_mul_thresh << std::endl;
-
+      
+      //创建统计离群点移除对象
       pcl::StatisticalOutlierRemoval<PointT>::Ptr sor(new pcl::StatisticalOutlierRemoval<PointT>());
       sor->setMeanK(mean_k);
       sor->setStddevMulThresh(stddev_mul_thresh);
-      outlier_removal_filter = sor;
+      outlier_removal_filter = sor;   // 将智能指针指向统计离群点移除对象
     } else if(outlier_removal_method == "RADIUS") {
-      double radius = private_nh.param<double>("radius_radius", 0.8);
-      int min_neighbors = private_nh.param<int>("radius_min_neighbors", 2);
+      double radius = private_nh.param<double>("radius_radius", 0.8);                   // 半径
+      int min_neighbors = private_nh.param<int>("radius_min_neighbors", 2);             // 领域最小点数
       std::cout << "outlier_removal: RADIUS " << radius << " - " << min_neighbors << std::endl;
-
+      
+      // 创建半径离群点移除对象
       pcl::RadiusOutlierRemoval<PointT>::Ptr rad(new pcl::RadiusOutlierRemoval<PointT>());
       rad->setRadiusSearch(radius);
       rad->setMinNeighborsInRadius(min_neighbors);
-      outlier_removal_filter = rad;
+      outlier_removal_filter = rad;   // 将智能指针指向半径离群点移除对象
     } 
     // else if (outlier_removal_method == "BILATERAL")
     // {
@@ -163,13 +170,15 @@ private:
       std::cout << "outlier_removal: NONE" << std::endl;
     }
 
-    use_distance_filter = private_nh.param<bool>("use_distance_filter", true);
-    distance_near_thresh = private_nh.param<double>("distance_near_thresh", 1.0);
-    distance_far_thresh = private_nh.param<double>("distance_far_thresh", 100.0);
-    z_low_thresh = private_nh.param<double>("z_low_thresh", -5.0);
+    // 距离过滤相关参数
+    use_distance_filter = private_nh.param<bool>("use_distance_filter", true);    // 表示是否使用距离过滤
+    distance_near_thresh = private_nh.param<double>("distance_near_thresh", 1.0); // 距离过滤的近的阈值
+    distance_far_thresh = private_nh.param<double>("distance_far_thresh", 100.0); // 距离过滤的远的阈值
+    // 点云在z轴上的高度范围
+    z_low_thresh = private_nh.param<double>("z_low_thresh", -5.0);                
     z_high_thresh = private_nh.param<double>("z_high_thresh", 20.0);
 
-
+    // 从参数服务器获取ground truth文件路径和是否进行tf发布的参数
     std::string file_name = private_nh.param<std::string>("gt_file_location", "");
     publish_tf = private_nh.param<bool>("publish_tf", false);
 
@@ -178,6 +187,7 @@ private:
         cout << "Can not open this gt file" << endl;
     }
     else{
+      //将文件中的每一行存储到vector中
       std::vector<std::string> vectorLines;
       std::string line;
       while (getline(file_in, line)) {
@@ -185,18 +195,21 @@ private:
       }
       
       for (size_t i = 1; i < vectorLines.size(); i++) {
-          std::string line_ = vectorLines.at(i);
-          double stamp,tx,ty,tz,qx,qy,qz,qw;
-          stringstream data(line_);
-          data >> stamp >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
-          nav_msgs::Odometry odom_msg;
-          odom_msg.header.frame_id = mapFrame;
-          odom_msg.child_frame_id = baselinkFrame;
+          std::string line_ = vectorLines.at(i);                    // 获取vector中的每一行
+          double stamp,tx,ty,tz,qx,qy,qz,qw;                        // 定义相关变量
+          stringstream data(line_);                                 // 使用字符串流读取当前行的数据
+          data >> stamp >> tx >> ty >> tz >> qx >> qy >> qz >> qw;  // 解析当前行的数据
+          nav_msgs::Odometry odom_msg;                              // 创建Odometry消息对象
+          // odom_msg的头部信息
+          odom_msg.header.frame_id = mapFrame;                      // 该消息所在的坐标系的名称            
+          odom_msg.child_frame_id = baselinkFrame;                  // 表示一个相对于frame_id的子坐标系。如激光雷达数据的child_frame_id可能是base_laser,表示激光雷达相对于机器人底盘坐标系的位置。
           odom_msg.header.stamp = ros::Time().fromSec(stamp);
+          // odom_msg的姿态信息
           odom_msg.pose.pose.orientation.w = qw;
           odom_msg.pose.pose.orientation.x = qx;
           odom_msg.pose.pose.orientation.y = qy;
           odom_msg.pose.pose.orientation.z = qz;
+          // odom_msg的位置信息
           odom_msg.pose.pose.position.x = tx;
           odom_msg.pose.pose.position.y = ty;
           odom_msg.pose.pose.position.z = tz;
