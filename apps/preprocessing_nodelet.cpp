@@ -283,15 +283,13 @@ private:
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
     // 定义两种不同的点云类型和它们的指针
-    // radarpoint_raw ：包含点云xyz坐标，强度和多普勒速度
-    // radarpoint_xyzi: 包含点云xyz坐标，强度
-    RadarPointCloudType radarpoint_raw;
-    PointT radarpoint_xyzi;
+    RadarPointCloudType radarpoint_raw;            // 原始点云，带有x、y、z、强度和多普勒速度信息
+    PointT radarpoint_xyzi;                        // 原始点云，带有x、y、z、强度信息
     pcl::PointCloud<RadarPointCloudType>::Ptr radarcloud_raw( new pcl::PointCloud<RadarPointCloudType> );
     pcl::PointCloud<PointT>::Ptr radarcloud_xyzi( new pcl::PointCloud<PointT> );
 
     radarcloud_xyzi->header.frame_id = baselinkFrame;
-    radarcloud_xyzi->header.seq = eagle_msg->header.seq;
+    radarcloud_xyzi->header.seq = eagle_msg->header.seq;        // 序列号，用于标识消息的顺序
     radarcloud_xyzi->header.stamp = eagle_msg->header.stamp.toSec() * 1e6;
 
     // 遍历每一个点，i表示点
@@ -302,12 +300,17 @@ private:
         // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
         if(eagle_msg->channels[2].values[i] > power_threshold) //"Power"
         {
+            // 检查点的坐标是否无效(NaN或无穷大)
             if (eagle_msg->points[i].x == NAN || eagle_msg->points[i].y == NAN || eagle_msg->points[i].z == NAN) continue;
             if (eagle_msg->points[i].x == INFINITY || eagle_msg->points[i].y == INFINITY || eagle_msg->points[i].z == INFINITY) continue;
+           
+            // 将点从雷达坐标系转换到Livox坐标系
             cv::Mat ptMat, dstMat;
             ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1);    
             // Perform matrix multiplication and save as Mat_ for easy element access
             dstMat= Radar_to_livox * ptMat;
+
+            // 对点进行赋值
             radarpoint_raw.x = dstMat.at<double>(0,0);
             radarpoint_raw.y = dstMat.at<double>(1,0);
             radarpoint_raw.z = dstMat.at<double>(2,0);
@@ -325,28 +328,31 @@ private:
     }
 
     //********** Publish PointCloud2 Format Raw Cloud **********
-    sensor_msgs::PointCloud2 pc2_raw_msg;
-    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);
-    pc2_raw_msg.header.stamp = eagle_msg->header.stamp;
-    pc2_raw_msg.header.frame_id = baselinkFrame;
-    pc2_raw_pub.publish(pc2_raw_msg);
+    sensor_msgs::PointCloud2 pc2_raw_msg;                       // 定义PointCloud2消息对象
+    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);                // 将pcl的点云数据radarcloud_raw转换为ROS中的PointCloud2格式(pc2_raw_msg)
+    pc2_raw_msg.header.stamp = eagle_msg->header.stamp;         // 时间戳
+    pc2_raw_msg.header.frame_id = baselinkFrame;                // 消息所在坐标系
+    pc2_raw_pub.publish(pc2_raw_msg);                           // 发布消息到指定的话题/eagle_data/pc2_raw中
 
     //********** Ego Velocity Estimation **********
-    Eigen::Vector3d v_r, sigma_v_r;
-    sensor_msgs::PointCloud2 inlier_radar_msg, outlier_radar_msg;
-    clock_t start_ms = clock();
+    Eigen::Vector3d v_r, sigma_v_r;                               // 雷达的自我线速度和线速度的不确定性
+    sensor_msgs::PointCloud2 inlier_radar_msg, outlier_radar_msg; // 内点点云数据(运动信息)和外点点云数据(噪声或运动干扰) 
+    clock_t start_ms = clock();                                   // 记录开始估计自我运动的时刻
+    // 调用estimate函数进行自我运动估计，如果估计成功，返回true，并将并将估计得到的线速度和不确定性保存在 v_r 和 sigma_v_r 中
+    // 同时将内点和外点的点云数据保存在 inlier_radar_msg 和 outlier_radar_msg 中
     if (estimator.estimate(pc2_raw_msg, v_r, sigma_v_r, inlier_radar_msg, outlier_radar_msg))
     {
-        clock_t end_ms = clock();
-        double time_used = double(end_ms - start_ms) / CLOCKS_PER_SEC;
-        egovel_time.push_back(time_used);
+        clock_t end_ms = clock();                                       // 自我运动估计结束的时刻
+        double time_used = double(end_ms - start_ms) / CLOCKS_PER_SEC;  // 自我运动估计所用的时间，单位为秒
+        egovel_time.push_back(time_used);                               // 将自我运动估计的所用时间添加到时间数组中
         
+        // 将估计得到的线速度和不确定性信息赋值给twist对象
         geometry_msgs::TwistWithCovarianceStamped twist;
         twist.header.stamp         = pc2_raw_msg.header.stamp;
         twist.twist.twist.linear.x = v_r.x();
         twist.twist.twist.linear.y = v_r.y();
         twist.twist.twist.linear.z = v_r.z();
-
+        // 三个方向上的协方差矩阵，分别表示三个方向上的不确定性
         twist.twist.covariance.at(0)  = std::pow(sigma_v_r.x(), 2);
         twist.twist.covariance.at(7)  = std::pow(sigma_v_r.y(), 2);
         twist.twist.covariance.at(14) = std::pow(sigma_v_r.z(), 2);
@@ -358,16 +364,18 @@ private:
     }
     else{;}
 
+    // 创建一个指向pcl::PointCloud模板类（类型为PointT）的智能指针，该点云用于存储雷达点云中的内点。
     pcl::PointCloud<PointT>::Ptr radarcloud_inlier( new pcl::PointCloud<PointT> );
-    pcl::fromROSMsg (inlier_radar_msg, *radarcloud_inlier);
-
-    pcl::PointCloud<PointT>::ConstPtr src_cloud;
-    if (enable_dynamic_object_removal)
-      src_cloud = radarcloud_inlier;
-    else
-      src_cloud = radarcloud_xyzi;
-
+    pcl::fromROSMsg (inlier_radar_msg, *radarcloud_inlier);           // 从ROS消息转换为pcl点云类型，包含了内点信息。
     
+    // src_cloud指针，用于选择处理的源点云
+    pcl::PointCloud<PointT>::ConstPtr src_cloud;
+    if (enable_dynamic_object_removal)    // 若选择启用了动态物体去除，指向雷达点云的内点
+      src_cloud = radarcloud_inlier;
+    else                                  // 未启用，指向原始的雷达点云
+      src_cloud = radarcloud_xyzi;        
+
+    // 没有有效数据或者数据获取不成功，直接返回
     if(src_cloud->empty()) {
       return;
     }
@@ -375,37 +383,41 @@ private:
     src_cloud = deskewing(src_cloud);
 
     // if baselinkFrame is defined, transform the input cloud to the frame
-    if(!baselinkFrame.empty()) {
+    if(!baselinkFrame.empty()) {      // 检查是否定义了基准坐标系
+      // 检查是否能够获取从src_cloud的坐标系到baselinkFrame的变换
       if(!tf_listener.canTransform(baselinkFrame, src_cloud->header.frame_id, ros::Time(0))) {
         std::cerr << "failed to find transform between " << baselinkFrame << " and " << src_cloud->header.frame_id << std::endl;
       }
 
+      // 在最多等待2秒的时间内等待坐标变换的可用性
+      // 获取从src_cloud坐标系到baselinkFrame的变换，并将其存储在transform中
       tf::StampedTransform transform;
       tf_listener.waitForTransform(baselinkFrame, src_cloud->header.frame_id, ros::Time(0), ros::Duration(2.0));
       tf_listener.lookupTransform(baselinkFrame, src_cloud->header.frame_id, ros::Time(0), transform);
 
-      pcl::PointCloud<PointT>::Ptr transformed(new pcl::PointCloud<PointT>());
-      pcl_ros::transformPointCloud(*src_cloud, *transformed, transform);
+      pcl::PointCloud<PointT>::Ptr transformed(new pcl::PointCloud<PointT>());      // 坐标变换后的点云
+      pcl_ros::transformPointCloud(*src_cloud, *transformed, transform);            // 转换坐标
       transformed->header.frame_id = baselinkFrame;
       transformed->header.stamp = src_cloud->header.stamp;
-      src_cloud = transformed;
+      src_cloud = transformed;                                                      // 更新src_cloud，使其代表baselinkFrame中的点云
     }
 
-    pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);
+    // 对点云依次进行距离过滤、下采样、离群点去除
+    pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);        
     // filtered = passthrough(filtered);
-    filtered = downsample(filtered);
+    filtered = downsample(filtered);                
     filtered = outlier_removal(filtered);
 
-    // Distance Histogram
-    static size_t num_frame = 0;
-    if (num_frame % 10 == 0) {
-      Eigen::VectorXi num_at_dist = Eigen::VectorXi::Zero(100);
-      for (int i = 0; i < filtered->size(); i++){
-        int dist = floor(filtered->at(i).getVector3fMap().norm());
-        if (dist < 100)
+    // Distance Histogram      计算点云中不同距离范围内点的数量，形成一个距离直方图
+    static size_t num_frame = 0;            // 帧数
+    if (num_frame % 10 == 0) {              // 每隔10帧执行操作
+      Eigen::VectorXi num_at_dist = Eigen::VectorXi::Zero(100);       // 长度为100的整数向量，并将其所有元素初始化为0
+      for (int i = 0; i < filtered->size(); i++){                     // 遍历filetred中的每个点
+        int dist = floor(filtered->at(i).getVector3fMap().norm());    // 计算当前点到原点的距离，结果取整
+        if (dist < 100)                                               // 如果距离小于100，则增加相应距离范围内点的数量
           num_at_dist(dist) += 1;
       }
-      num_at_dist_vec.push_back(num_at_dist);
+      num_at_dist_vec.push_back(num_at_dist);                         // 将当前帧计算得到的距离直方图添加到num_at_dist_vec向量中
     }
 
     points_pub.publish(*filtered);
