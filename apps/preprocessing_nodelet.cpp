@@ -220,24 +220,26 @@ private:
     file_in.close();
   }
 
+  // 处理Imu数据并发布，同时发布和Imu数据时间戳对应的Ground Truth数据(Odom消息)
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
     sensor_msgs::Imu imu_data;
+    // imu_data的头部信息
     imu_data.header.stamp = imu_msg->header.stamp;
     imu_data.header.seq = imu_msg->header.seq;
     imu_data.header.frame_id = "imu_frame";
-    Eigen::Quaterniond q_ahrs(imu_msg->orientation.w,
+    Eigen::Quaterniond q_ahrs(imu_msg->orientation.w,   // 四元数的姿态信息
                               imu_msg->orientation.x,
                               imu_msg->orientation.y,
                               imu_msg->orientation.z);
-    Eigen::Quaterniond q_r = 
+    Eigen::Quaterniond q_r =                            // 绕Z轴旋转180度，然后绕Y轴旋转180度，最后绕X轴旋转0度的旋转
         Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitZ()) * 
         Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY()) * 
         Eigen::AngleAxisd( 0.00000, Eigen::Vector3d::UnitX());
-    Eigen::Quaterniond q_rr = 
+    Eigen::Quaterniond q_rr =                           // 绕Z轴旋转0度，然后绕Y轴旋转0度，最后绕X轴旋转180度的旋转
         Eigen::AngleAxisd( 0.00000, Eigen::Vector3d::UnitZ()) * 
         Eigen::AngleAxisd( 0.00000, Eigen::Vector3d::UnitY()) * 
         Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitX());
-    Eigen::Quaterniond q_out =  q_r * q_ahrs * q_rr;
+    Eigen::Quaterniond q_out =  q_r * q_ahrs * q_rr;    // 校正原始的IMU数据的姿态信息
     imu_data.orientation.w = q_out.w();
     imu_data.orientation.x = q_out.x();
     imu_data.orientation.y = q_out.y();
@@ -248,21 +250,29 @@ private:
     imu_data.linear_acceleration.x = imu_msg->linear_acceleration.x;
     imu_data.linear_acceleration.y = -imu_msg->linear_acceleration.y;
     imu_data.linear_acceleration.z = -imu_msg->linear_acceleration.z;
-    imu_pub.publish(imu_data);
+    imu_pub.publish(imu_data);                          // 发布新的Imu消息
     // imu_queue.push_back(imu_msg);
-    double time_now = imu_msg->header.stamp.toSec();
+
+
+    double time_now = imu_msg->header.stamp.toSec();    // 当前Imu数据的时间戳
     bool updated = false;
     if (odom_msgs.size() != 0) {
+      // 循环处理Odometry队列
+      // 如果队列的第一个元素的时间戳小于当前时间戳减去偏移，将队列的第一个元素弹出，表示已经处理了这个时间戳对应的 Odometry 消息。
       while (odom_msgs.front().header.stamp.toSec() + 0.001 < time_now) {
+        // 锁定互斥锁，弹出队列的第一个元素
         std::lock_guard<std::mutex> lock(odom_queue_mutex);
         odom_msgs.pop_front();
         updated = true;
+
+        // 如果队列为空，退出循环
         if (odom_msgs.size() == 0)
           break;
       }
     }
-    if (updated == true && odom_msgs.size() > 0){
-      if (publish_tf) {
+
+    if (updated == true && odom_msgs.size() > 0){       // 队列更新且不为空
+      if (publish_tf) {                                 // 如果启用了发布TF，则创建并发布TransformStamped消息
         geometry_msgs::TransformStamped tf_msg;
         tf_msg.child_frame_id = baselinkFrame;
         tf_msg.header.frame_id = mapFrame;
@@ -272,7 +282,7 @@ private:
         tf_msg.transform.translation.x = odom_msgs.front().pose.pose.position.x;
         tf_msg.transform.translation.y = odom_msgs.front().pose.pose.position.y;
         tf_msg.transform.translation.z = odom_msgs.front().pose.pose.position.z;
-        tf_broadcaster.sendTransform(tf_msg);
+        tf_broadcaster.sendTransform(tf_msg);           // 使用TF Broadcaster发布Transform
       }
       
       gt_pub.publish(odom_msgs.front());
@@ -424,7 +434,7 @@ private:
     
   }
 
-
+  // 点云的区域截取，输入点云中 z 坐标在 -2 和 10 之间的点截取出来，返回一个新的点云
   pcl::PointCloud<PointT>::ConstPtr passthrough(const pcl::PointCloud<PointT>::ConstPtr& cloud) const {
     pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>());
     PointT pt;
@@ -441,8 +451,9 @@ private:
     return filtered;
   }
 
+  // 下采样函数，用于减少点云的密度
   pcl::PointCloud<PointT>::ConstPtr downsample(const pcl::PointCloud<PointT>::ConstPtr& cloud) const {
-    if(!downsample_filter) {
+    if(!downsample_filter) {      // 若不存在下采样滤波器，移除NaN/Inf点并返回
       // Remove NaN/Inf points
       pcl::PointCloud<PointT>::Ptr cloudout(new pcl::PointCloud<PointT>());
       std::vector<int> indices;
@@ -451,6 +462,7 @@ private:
       return cloudout;
     }
 
+    // 若存在下采样滤波器，创建一个新的点云对象用于存储下采样后的点云
     pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>());
     downsample_filter->setInputCloud(cloud);
     downsample_filter->filter(*filtered);
@@ -459,6 +471,7 @@ private:
     return filtered;
   }
 
+  // 离群点移除函数
   pcl::PointCloud<PointT>::ConstPtr outlier_removal(const pcl::PointCloud<PointT>::ConstPtr& cloud) const {
     if(!outlier_removal_filter) {
       return cloud;
@@ -472,13 +485,17 @@ private:
     return filtered;
   }
 
+  // 距离过滤函数
   pcl::PointCloud<PointT>::ConstPtr distance_filter(const pcl::PointCloud<PointT>::ConstPtr& cloud) const {
     pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>());
 
-    filtered->reserve(cloud->size());
+    filtered->reserve(cloud->size());                     // 为过滤后的点云预先分配空间
+
+
     std::copy_if(cloud->begin(), cloud->end(), std::back_inserter(filtered->points), [&](const PointT& p) {
-      double d = p.getVector3fMap().norm();
-      double z = p.z;
+      double d = p.getVector3fMap().norm();               // 计算点到原点的距离
+      double z = p.z;                                     // 获取点的z坐标
+      // 根据设定的距离阈值和Z坐标范围过滤点云
       return d > distance_near_thresh && d < distance_far_thresh && z < z_high_thresh && z > z_low_thresh;
     });
     // for (size_t i=0; i<cloud->size(); i++){
@@ -489,10 +506,12 @@ private:
     //     filtered->points.push_back(p);
     // }
 
+    // 设置过滤后的点云的宽度、高度和稠密属性
     filtered->width = filtered->size();
     filtered->height = 1;
     filtered->is_dense = false;
 
+    // 将过滤后的点云的头信息设置为与输入点云相同
     filtered->header = cloud->header;
 
     return filtered;
@@ -500,12 +519,12 @@ private:
 
   pcl::PointCloud<PointT>::ConstPtr deskewing(const pcl::PointCloud<PointT>::ConstPtr& cloud) {
     ros::Time stamp = pcl_conversions::fromPCL(cloud->header.stamp);
-    if(imu_queue.empty()) {
+    if(imu_queue.empty()) {           // 如果IMU队列为空，直接返回原始点云(无法进行去畸变)
       return cloud;
     }
 
     // the color encodes the point number in the point sequence
-    if(colored_pub.getNumSubscribers()) {
+    if(colored_pub.getNumSubscribers()) {     // 如果有节点订阅了带颜色的点云，将带有颜色的点云发布出去
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored(new pcl::PointCloud<pcl::PointXYZRGB>());
       colored->header = cloud->header;
       colored->is_dense = cloud->is_dense;
@@ -523,8 +542,10 @@ private:
       colored_pub.publish(*colored);
     }
 
+    // 从IMU队列中获取最早的IMU数据，用于去畸变
     sensor_msgs::ImuConstPtr imu_msg = imu_queue.front();
 
+    // 寻找IMU队列中最早的时间戳，以与当前点云对齐
     auto loc = imu_queue.begin();
     for(; loc != imu_queue.end(); loc++) {
       imu_msg = (*loc);
@@ -533,11 +554,14 @@ private:
       }
     }
 
+    // 从IMU队列中移除已使用的IMU数据
     imu_queue.erase(imu_queue.begin(), loc);
 
+    // 获取IMU的角度速度，并反转
     Eigen::Vector3f ang_v(imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z);
     ang_v *= -1;
 
+    // deskewed存储去畸变后的点云
     pcl::PointCloud<PointT>::Ptr deskewed(new pcl::PointCloud<PointT>());
     deskewed->header = cloud->header;
     deskewed->is_dense = cloud->is_dense;
@@ -545,15 +569,18 @@ private:
     deskewed->height = cloud->height;
     deskewed->resize(cloud->size());
 
+    // 获取扫描周期
     double scan_period = private_nh.param<double>("scan_period", 0.1);
+    // 遍历每个点，进行去畸变操作
     for(int i = 0; i < cloud->size(); i++) {
       const auto& pt = cloud->at(i);
 
       // TODO: transform IMU data into the LIDAR frame
-      double delta_t = scan_period * static_cast<double>(i) / cloud->size();
-      Eigen::Quaternionf delta_q(1, delta_t / 2.0 * ang_v[0], delta_t / 2.0 * ang_v[1], delta_t / 2.0 * ang_v[2]);
-      Eigen::Vector3f pt_ = delta_q.inverse() * pt.getVector3fMap();
+      double delta_t = scan_period * static_cast<double>(i) / cloud->size();          // 计算每个点在扫描周期内的时间偏移
+      Eigen::Quaternionf delta_q(1, delta_t / 2.0 * ang_v[0], delta_t / 2.0 * ang_v[1], delta_t / 2.0 * ang_v[2]);  // 在delta_t内发生的旋转
+      Eigen::Vector3f pt_ = delta_q.inverse() * pt.getVector3fMap();                  // 将点的三维坐标转换成 Vector3f 类型，然后乘以四元数的逆来应用去畸变变换
 
+      // 将去畸变后的点添加到新的点云中
       deskewed->at(i) = cloud->at(i);
       deskewed->at(i).getVector3fMap() = pt_;
     }
@@ -588,20 +615,20 @@ private:
   }
 
   void command_callback(const std_msgs::String& str_msg) {
-    if (str_msg.data == "time") {
-      std::sort(egovel_time.begin(), egovel_time.end());
-      double median = egovel_time.at(size_t(egovel_time.size() / 2));
+    if (str_msg.data == "time") {                                           // 如果收到的命令是time
+      std::sort(egovel_time.begin(), egovel_time.end());                    // 对存储着时间的容器进行排序
+      double median = egovel_time.at(size_t(egovel_time.size() / 2));       // 计算排序后的中值
       cout << "Ego velocity time cost (median): " << median << endl;
     }
-    else if (str_msg.data == "point_distribution") {
+    else if (str_msg.data == "point_distribution") {                        // 如果收到的命令是point_distribution           
       Eigen::VectorXi data(100);
-      for (size_t i = 0; i < num_at_dist_vec.size(); i++){ // N
+      for (size_t i = 0; i < num_at_dist_vec.size(); i++){                  // num_at_dist_vec存储着点分布数据
         Eigen::VectorXi& nad = num_at_dist_vec.at(i);
         for (int j = 0; j< 100; j++){
-          data(j) += nad(j);
+          data(j) += nad(j);                                                // 将每个位置上的数据相加，得到累计的点分布数据
         }
       }
-      data /= num_at_dist_vec.size();
+      data /= num_at_dist_vec.size();                                       // 计算平均值
       for (int i=0; i<data.size(); i++){
         cout << data(i) << ", ";
       }
