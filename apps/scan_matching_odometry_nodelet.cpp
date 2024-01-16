@@ -107,40 +107,40 @@ private:
    */
   void initialize_params() {
     auto& pnh = private_nh;
-    points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");
-    use_ego_vel = pnh.param<bool>("use_ego_vel", false);
+    points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");           // 点云话题
+    use_ego_vel = pnh.param<bool>("use_ego_vel", false);                                    // 是否使用车辆自我速度
 
     // The minimum tranlational distance and rotation angle between keyframes_.
     // If this value is zero, frames are always compared with the previous frame
-    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);
-    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);
-    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);
+    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);                 // 关键帧之间的最小平移距离
+    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);                 // 关键帧之间的最小旋转角度
+    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);                    // 关键帧之间的最小时间间隔
 
     // Registration validation by thresholding
-    enable_transform_thresholding = pnh.param<bool>("enable_transform_thresholding", false);
-    enable_imu_thresholding = pnh.param<bool>("enable_imu_thresholding", false);
-    max_acceptable_trans = pnh.param<double>("max_acceptable_trans", 1.0);
-    max_acceptable_angle = pnh.param<double>("max_acceptable_angle", 1.0);
-    max_diff_trans = pnh.param<double>("max_diff_trans", 1.0);
-    max_diff_angle = pnh.param<double>("max_diff_angle", 1.0);
-    max_egovel_cum = pnh.param<double>("max_egovel_cum", 1.0);
+    enable_transform_thresholding = pnh.param<bool>("enable_transform_thresholding", false);// 是否启用通过阈值判断进行配准验证
+    enable_imu_thresholding = pnh.param<bool>("enable_imu_thresholding", false);            // 是否启用IMU数据进行阈值判断
+    max_acceptable_trans = pnh.param<double>("max_acceptable_trans", 1.0);                  // 允许的最大平移阈值
+    max_acceptable_angle = pnh.param<double>("max_acceptable_angle", 1.0);                  // 允许的最大旋转阈值
+    max_diff_trans = pnh.param<double>("max_diff_trans", 1.0);                              // 最大平移差异阈值，默认1米
+    max_diff_angle = pnh.param<double>("max_diff_angle", 1.0);                              // 最大旋转阈值，默认1弧度
+    max_egovel_cum = pnh.param<double>("max_egovel_cum", 1.0);                              // 最大累积自身车辆速度阈值
 
-    map_cloud_resolution = pnh.param<double>("map_cloud_resolution", 0.05);
-    keyframe_updater.reset(new KeyframeUpdater(pnh));
+    map_cloud_resolution = pnh.param<double>("map_cloud_resolution", 0.05);                 // 点云地图的分辨率，默认为0.05米
+    keyframe_updater.reset(new KeyframeUpdater(pnh));                                       // 初始化关键帧更新器
 
-    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);
-    max_submap_frames = pnh.param<int>("max_submap_frames", 5);
+    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);                      // 是否启用从激光雷达扫描到地图的配准
+    max_submap_frames = pnh.param<int>("max_submap_frames", 5);                             // 子地图包含的最大帧数
 
-    enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", false);
-    imu_debug_out = private_nh.param<bool>("imu_debug_out", false);
+    enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", false);                 // 是否启用Imu数据融合
+    imu_debug_out = private_nh.param<bool>("imu_debug_out", false);                         // 是否启用IMU调试输出
     cout << "enable_imu_fusion = " << enable_imu_fusion << endl;
-    imu_fusion_ratio = private_nh.param<double>("imu_fusion_ratio", 0.1);
+    imu_fusion_ratio = private_nh.param<double>("imu_fusion_ratio", 0.1);                   // IMU数据融合比例
 
     // graph_slam.reset(new GraphSLAM(pnh.param<std::string>("g2o_solver_type", "lm_var")));
 
     // select a downsample method (VOXELGRID, APPROX_VOXELGRID, NONE)
-    std::string downsample_method = pnh.param<std::string>("downsample_method", "VOXELGRID");
-    double downsample_resolution = pnh.param<double>("downsample_resolution", 0.1);
+    std::string downsample_method = pnh.param<std::string>("downsample_method", "VOXELGRID");// 下采样方法
+    double downsample_resolution = pnh.param<double>("downsample_resolution", 0.1);          
     if(downsample_method == "VOXELGRID") {
       std::cout << "downsample: VOXELGRID " << downsample_resolution << std::endl;
       auto voxelgrid = new pcl::VoxelGrid<PointT>();
@@ -160,24 +160,24 @@ private:
       pcl::PassThrough<PointT>::Ptr passthrough(new pcl::PassThrough<PointT>());
       downsample_filter = passthrough;
     }
-    registration_s2s = select_registration_method(pnh);
-    registration_s2m = select_registration_method(pnh);
+    registration_s2s = select_registration_method(pnh);                                     // 选择扫描到扫描的配准方法
+    registration_s2m = select_registration_method(pnh);                                     // 选择扫描到地图的配准方法
   }
 
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
     
     Eigen::Quaterniond imu_quat_from(imu_msg->orientation.w, imu_msg->orientation.x, imu_msg->orientation.y, imu_msg->orientation.z);
-    Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;
-    imu_quat_deskew.normalize();
+    Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;            // 通过预定义的extQRPY对IMU方向进行去扰动
+    imu_quat_deskew.normalize();                                             // 归一化去扰动后的四元数
 
-    double roll, pitch, yaw;
-    // tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation);
-    tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w());
-    tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
-    imuPointerLast = (imuPointerLast + 1) % imuQueLength;
-    imuTime[imuPointerLast] = imu_msg->header.stamp.toSec();
-    imuRoll[imuPointerLast] = roll;
-    imuPitch[imuPointerLast] = pitch;
+    double roll, pitch, yaw;                                                
+    // tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation); 
+    tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w()); // 将去扰动后的四元数转换为TF库中的四元数。
+    tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);                      // 使用TF库计算RPY角
+    imuPointerLast = (imuPointerLast + 1) % imuQueLength;                     // 更新IMU队列的指针
+    imuTime[imuPointerLast] = imu_msg->header.stamp.toSec();                  // IMU消息的时间戳
+    imuRoll[imuPointerLast] = roll;                                           // IMU消息的滚转角
+    imuPitch[imuPointerLast] = pitch;                                         // IMU消息的俯仰角
     // cout << "get imu rp: " << roll << " " << pitch << endl;
 
     sensor_msgs::ImuPtr imu(new sensor_msgs::Imu);
@@ -187,15 +187,15 @@ private:
     imu->linear_acceleration_covariance, imu_msg->linear_acceleration_covariance;
     imu->orientation_covariance = imu_msg->orientation_covariance;
     imu->orientation.w=imu_quat_deskew.w(); imu->orientation.x = imu_quat_deskew.x(); imu->orientation.y = imu_quat_deskew.y(); imu->orientation.z = imu_quat_deskew.z();
-    {
+    { // 将新的IMU消息推送到IMU队列中，使用互斥锁确保线程安全
       std::lock_guard<std::mutex> lock(imu_queue_mutex);
-      imu_queue.push_back(imu);
+      imu_queue.push_back(imu); 
     }
 
-    static int cnt = 0;
-    if(cnt == 0) {
-      geometry_msgs::Quaternion imuQuat = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, 0);
-      global_orient_matrix = Eigen::Quaterniond(imuQuat.w, imuQuat.x, imuQuat.y, imuQuat.z).toRotationMatrix();
+    static int cnt = 0;                             // 静态计数器，用于跟踪处理IMU消息的次数
+    if(cnt == 0) {                                  // 在第一次处理IMU消息时执行
+      geometry_msgs::Quaternion imuQuat = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, 0);              // 使用TF库创建包含给定RPY角的四元数
+      global_orient_matrix = Eigen::Quaterniond(imuQuat.w, imuQuat.x, imuQuat.y, imuQuat.z).toRotationMatrix(); // 将四元数转换为旋转矩阵，并设置为全局变量
       ROS_INFO_STREAM("Initial IMU euler angles (RPY): "
             << RAD2DEG(roll) << ", " << RAD2DEG(pitch) << ", " << RAD2DEG(yaw));
       cnt = 1;
@@ -203,28 +203,30 @@ private:
     
   }
 
+
+  // 根据时间戳的相似度，关联IMU和关键帧数据
   bool flush_imu_queue() {
     std::lock_guard<std::mutex> lock(imu_queue_mutex);
-    if(keyframes.empty() || imu_queue.empty()) {
+    if(keyframes.empty() || imu_queue.empty()) {// 关键帧队列或IMU队列为空，没有进行更新
       return false;
     }
-    bool updated = false;
+    bool updated = false;                       // 标志是否有新的IMU数据与关键帧相关联
     auto imu_cursor = imu_queue.begin();
 
-    for(size_t i=0; i < keyframes.size(); i++) {
-      auto keyframe = keyframes.at(i);
-      if(keyframe->stamp < (*imu_cursor)->header.stamp) {
+    for(size_t i=0; i < keyframes.size(); i++) {           // 遍历关键帧队列
+      auto keyframe = keyframes.at(i);                     // 当前关键帧
+      if(keyframe->stamp < (*imu_cursor)->header.stamp) {  // 关键帧的时间戳小于当前IMU数据的时间戳，跳过当前迭代
         continue;
       }
-      if(keyframe->stamp > imu_queue.back()->header.stamp) {
+      if(keyframe->stamp > imu_queue.back()->header.stamp) {// 如果关键帧的时间戳大于IMU队列中最后一条数据的时间戳，跳出循环。
         break;
       }
       // find the imu data which is closest to the keyframe_
-      auto closest_imu = imu_cursor;
-      for(auto imu = imu_cursor; imu != imu_queue.end(); imu++) {
-        auto dt = ((*closest_imu)->header.stamp - keyframe->stamp).toSec();
+      auto closest_imu = imu_cursor;                        
+      for(auto imu = imu_cursor; imu != imu_queue.end(); imu++) {                   
+        auto dt = ((*closest_imu)->header.stamp - keyframe->stamp).toSec(); // 当前最接近的IMU数据与关键帧时间戳的时间差
         auto dt2 = ((*imu)->header.stamp - keyframe->stamp).toSec();
-        if(std::abs(dt) < std::abs(dt2)) {
+        if(std::abs(dt) < std::abs(dt2)) {                                  // 如果当前最接近的IMU数据时间差小于当前迭代的时间差，跳出循环
           break;
         }
         closest_imu = imu;
@@ -240,21 +242,23 @@ private:
       imu_.angular_velocity_covariance = (*closest_imu)->angular_velocity_covariance;
       imu_.linear_acceleration_covariance = (*closest_imu)->linear_acceleration_covariance;
       imu_.orientation_covariance = (*closest_imu)->orientation_covariance;
-      keyframe->imu = imu_;
-      updated = true;
+      keyframe->imu = imu_;                                                   // 关联两者数据
+      updated = true;                                                         // 标记为有新的IMU数据与关键帧相关联。
     }
+    // 从imu_queue中删除那些已经与关键帧相关联的IMU数据
     auto remove_loc = std::upper_bound(imu_queue.begin(), imu_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const sensor_msgs::ImuConstPtr& imupoint) { return stamp < imupoint->header.stamp; });
     imu_queue.erase(imu_queue.begin(), remove_loc);
-    return updated;
+    return updated;                                       
   }
 
+  // 获取与给定时间戳最接近的IMU数据
   std::pair<bool, sensor_msgs::Imu> get_closest_imu(ros::Time frame_stamp) {
     sensor_msgs::Imu imu_;
     std::pair<bool, sensor_msgs::Imu> false_result {false, imu_};
-    if(keyframes.empty() || imu_queue.empty())
+    if(keyframes.empty() || imu_queue.empty())      // 关键帧队列或IMU队列为空，直接返回false_result
       return false_result;
-    bool updated = false;
-    auto imu_cursor = imu_queue.begin();
+    bool updated = false;                           // 标记是否成功获取IMU数据(与给定时间戳最近的)
+    auto imu_cursor = imu_queue.begin();            // IMU队列的迭代器
     
     // find the imu data which is closest to the keyframe_
     auto closest_imu = imu_cursor;
@@ -283,53 +287,57 @@ private:
     return result;
   }
 
-
+  // 将IMU的姿态信息融合到激光雷达里程计的变换矩阵中，以实现更准确的姿态估计
   void transformUpdate(Eigen::Matrix4d& odom_to_update) // IMU
   {
-		if (imuPointerLast >= 0) 
+		if (imuPointerLast >= 0) // 检查是否有IMU数据可用，imuPointerLast指向IMU队列的最新数据
     {
       // cout << "    ";
-      float imuRollLast = 0, imuPitchLast = 0;
+      float imuRollLast = 0, imuPitchLast = 0;                              // 用于存储最近的IMU Roll 和 Pitch 角度
       while (imuPointerFront != imuPointerLast) {
-        if (timeLaserOdometry + scanPeriod < imuTime[imuPointerFront]) {
+        if (timeLaserOdometry + scanPeriod < imuTime[imuPointerFront]) {    // 如果激光雷达的时间戳加上扫描周期小于当前IMU数据的时间戳，表示找到了最近的IMU数据，退出循环
           break;
         }
-        imuPointerFront = (imuPointerFront + 1) % imuQueLength;
+        imuPointerFront = (imuPointerFront + 1) % imuQueLength;             // 如果还没有找到最近的IMU数据，继续迭代
       }
       cout << "    ";
-      if (timeLaserOdometry + scanPeriod > imuTime[imuPointerFront]) {
+      if (timeLaserOdometry + scanPeriod > imuTime[imuPointerFront]) {      // 如果激光雷达的时间戳加上扫描周期大于最近的IMU数据的时间戳，表示找到了最近的IMU数据
         imuRollLast = imuRoll[imuPointerFront];
         imuPitchLast = imuPitch[imuPointerFront];
         cout << "    ";
       }
-      else {
+      else {                 // 如果没有刚好找到匹配的IMU数据，通过插值计算最近的IMU数据姿态
         cout << "    ";
-        int imuPointerBack = (imuPointerFront + imuQueLength - 1) % imuQueLength;
-        float ratioFront = (timeLaserOdometry + scanPeriod - imuTime[imuPointerBack])
+        int imuPointerBack = (imuPointerFront + imuQueLength - 1) % imuQueLength;                     // 计算前一个IMU数据的索引
+        float ratioFront = (timeLaserOdometry + scanPeriod - imuTime[imuPointerBack])                 // 计算插值的权重，用于前一个IMU数据
                           / (imuTime[imuPointerFront] - imuTime[imuPointerBack]);
-        float ratioBack = (imuTime[imuPointerFront] - timeLaserOdometry - scanPeriod) 
+        float ratioBack = (imuTime[imuPointerFront] - timeLaserOdometry - scanPeriod)                 // 计算插值的权重，用于当前IMU数据
                         / (imuTime[imuPointerFront] - imuTime[imuPointerBack]);
 
-        imuRollLast = imuRoll[imuPointerFront] * ratioFront + imuRoll[imuPointerBack] * ratioBack;
-        imuPitchLast = imuPitch[imuPointerFront] * ratioFront + imuPitch[imuPointerBack] * ratioBack;
+        imuRollLast = imuRoll[imuPointerFront] * ratioFront + imuRoll[imuPointerBack] * ratioBack;    // 通过线性插值计算最近IMU数据的Roll角度
+        imuPitchLast = imuPitch[imuPointerFront] * ratioFront + imuPitch[imuPointerBack] * ratioBack; // 通过线性插值计算最近IMU数据的Pitch角度
       }
       
-      Eigen::Matrix3d matr = odom_to_update.block<3, 3>(0, 0);
+      Eigen::Matrix3d matr = odom_to_update.block<3, 3>(0, 0);                    // 从激光雷达里程计的变换矩阵中提取旋转部分
       // Eigen::Vector3d xyz = odom_to_update.block<3, 1>(0, 3);
-      Eigen::Vector3d ypr_odom = R2ypr(matr.block<3,3>(0,0));
+      Eigen::Vector3d ypr_odom = R2ypr(matr.block<3,3>(0,0));                     // 将旋转矩阵转换为欧拉角表示，R2ypr是自定义的函数
+      // 根据IMU Roll、Pitch 和激光雷达里程计的Yaw构造IMU的四元数。
       geometry_msgs::Quaternion imuQuat = tf::createQuaternionMsgFromRollPitchYaw(imuRollLast, imuPitchLast, ypr_odom(0));
       Eigen::Matrix3d imu_rot = Eigen::Matrix3d(Eigen::Quaterniond(imuQuat.w, imuQuat.x, imuQuat.y, imuQuat.z));
-      Eigen::Vector3d ypr_imu = R2ypr(imu_rot);
+      Eigen::Vector3d ypr_imu = R2ypr(imu_rot);                                   // 将IMU的旋转矩阵转换为欧拉角表示
       // IMU orientation transformed from world coordinate to map coordinate
+      // 将IMU的旋转矩阵从世界坐标系变换到地图坐标系，通过地图坐标系的全局方向矩阵 global_orient_matrix 实现
       Eigen::Matrix3d imu_rot_transed = global_orient_matrix.inverse() * imu_rot;
       Eigen::Vector3d ypr_imu_trans = R2ypr(imu_rot_transed);
-      double& yaw_ = ypr_odom(0);
-      double pitch_fused = (1 - imu_fusion_ratio) * ypr_odom(1) + imu_fusion_ratio * ypr_imu_trans(1);
-      double roll_fused = (1 - imu_fusion_ratio) * ypr_odom(2) + imu_fusion_ratio * ypr_imu_trans(2);
+      double& yaw_ = ypr_odom(0);                                                 // 获取激光雷达里程计的yaw角度
+      double pitch_fused = (1 - imu_fusion_ratio) * ypr_odom(1) + imu_fusion_ratio * ypr_imu_trans(1);      // 融合IMU数据和激光雷达里程计的Pitch角度
+      double roll_fused = (1 - imu_fusion_ratio) * ypr_odom(2) + imu_fusion_ratio * ypr_imu_trans(2);       // 融合IMU数据和激光雷达里程计的Roll角度
+      // 根据融合后的Roll、Pitch和原始的Yaw构造更新后的四元数
       geometry_msgs::Quaternion rosQuat = tf::createQuaternionMsgFromRollPitchYaw(roll_fused, pitch_fused, yaw_);
-      Eigen::Quaterniond quat_updated = Eigen::Quaterniond(rosQuat.w, rosQuat.x, rosQuat.y, rosQuat.z);
-      odom_to_update.block<3, 3>(0, 0) = quat_updated.toRotationMatrix();
+      Eigen::Quaterniond quat_updated = Eigen::Quaterniond(rosQuat.w, rosQuat.x, rosQuat.y, rosQuat.z);     // 将更新后的四元数转换为Eigen库的Quaterniond类型
+      odom_to_update.block<3, 3>(0, 0) = quat_updated.toRotationMatrix();                                   // 将更新后的旋转矩阵写回激光雷达里程计的变换矩阵
 
+      // 如果启用了IMU的调试输出，打印IMU的Roll和Pitch角度以及其他信息
       if (imu_debug_out)
         cout << "IMU rp: " << RAD2DEG(ypr_imu(2)) << " " << RAD2DEG(ypr_imu(1))
             << ". IMU transed rp: " << RAD2DEG(ypr_imu_trans(2)) << " " << RAD2DEG(ypr_imu_trans(1))
