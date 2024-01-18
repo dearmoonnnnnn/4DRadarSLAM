@@ -356,11 +356,14 @@ private:
     if(!ros::ok()) {
       return;
     }
+
+    // 从点云信息提取时间戳
     timeLaserOdometry = cloud_msg->header.stamp.toSec();
     double this_cloud_time = cloud_msg->header.stamp.toSec();
     static double last_cloud_time = this_cloud_time;
 
-    double dt = this_cloud_time - last_cloud_time;
+    // 计算累积的自我速度
+    double dt = this_cloud_time - last_cloud_time;                      // 连续点云之间的时间差 = 当前点云时间 - 之前的点云时间
     double egovel_cum_x = twistMsg->twist.twist.linear.x * dt;
     double egovel_cum_y = twistMsg->twist.twist.linear.y * dt;
     double egovel_cum_z = twistMsg->twist.twist.linear.z * dt;
@@ -370,16 +373,18 @@ private:
     
     last_cloud_time = this_cloud_time;
 
+    // 将ROS点云消息转换为PCL点云消息
     pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
     pcl::fromROSMsg(*cloud_msg, *cloud);
 
-    // Matching
+    // Matching  执行点云配准来估计传感器位姿
     Eigen::Matrix4d pose = matching(cloud_msg->header.stamp, cloud);
     geometry_msgs::TwistWithCovariance twist = twistMsg->twist;
-    // publish map to odom frame
+    // publish map to odom frame  
     publish_odometry(cloud_msg->header.stamp, mapFrame, odometryFrame, pose, twist);
 
     // In offline estimation, point clouds will be supplied until the published time
+    // 使用read_until机制，处理特定时间戳之前的数据
     std_msgs::HeaderPtr read_until(new std_msgs::Header());
     read_until->frame_id = points_topic;
     read_until->stamp = cloud_msg->header.stamp + ros::Duration(1, 0);
@@ -422,80 +427,84 @@ private:
    * @return the relative pose between the input cloud and the keyframe_ cloud
    */
   Eigen::Matrix4d matching(const ros::Time& stamp, const pcl::PointCloud<PointT>::ConstPtr& cloud) {
-    if(!keyframe_cloud_s2s) {
-      prev_time = ros::Time();
-      prev_trans_s2s.setIdentity();
-      keyframe_pose_s2s.setIdentity();
-      keyframe_stamp = stamp;
-      keyframe_cloud_s2s = cloud;//downsample(cloud);
+    if(!keyframe_cloud_s2s) {                               // 若关键帧点云不为空
+      prev_time = ros::Time();                              // 将上一次处理的时间戳prev_time设置为零
+      prev_trans_s2s.setIdentity();                         // 将上一次的相对姿态变换prev_trans_s2s设置为单位矩阵
+      keyframe_pose_s2s.setIdentity();                      // 将关键帧的位姿设置为单位矩阵
+      keyframe_stamp = stamp;                               // 将关键帧的时间戳设置为当前输入点云的时间戳
+      keyframe_cloud_s2s = cloud;//downsample(cloud);       // 将关键帧的点云设置为当前输入的点云数据
+      // keyframe_cloud_s2s: 点云配准目标
+      // registration_s2s: 点云配准对象
       registration_s2s->setInputTarget(keyframe_cloud_s2s); // Scan-to-scan
-      if (enable_scan_to_map){
+      if (enable_scan_to_map){                              // 如果启用了扫描到地图的配准
         prev_trans_s2m.setIdentity();
         keyframe_pose_s2m.setIdentity();
         keyframe_cloud_s2m = cloud;
         registration_s2m->setInputTarget(keyframe_cloud_s2m);
       }
-      return Eigen::Matrix4d::Identity();
+      return Eigen::Matrix4d::Identity();                   // 由于当前是第一帧，相对姿态尚未计算，因此直接返回单位矩阵
     }
     // auto filtered = downsample(cloud);
     auto filtered = cloud;
     // Set Source Cloud
-    registration_s2s->setInputSource(filtered);
+    registration_s2s->setInputSource(filtered);              // 设置filtered为配准的源点云，用于扫描到扫描的配准
     if (enable_scan_to_map)
-      registration_s2m->setInputSource(filtered);
+      registration_s2m->setInputSource(filtered);            // 设置filtered为配准的源点云，用于扫描到地图的配准
 
     std::string msf_source;
-    Eigen::Isometry3d msf_delta = Eigen::Isometry3d::Identity();
+    Eigen::Isometry3d msf_delta = Eigen::Isometry3d::Identity();    // msf_delta用于存储扫描匹配的相对位姿变换
     
-    pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());
-    Eigen::Matrix4d odom_s2s_now;
-    Eigen::Matrix4d odom_s2m_now;
+    pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());    // aligned 存储配准后的点云
+    Eigen::Matrix4d odom_s2s_now;                                           // 变换矩阵，存储扫描到扫描配准后的位姿
+    Eigen::Matrix4d odom_s2m_now;                                           // 变换矩阵，存储扫描到地图配准后的位姿
 
     // **********  Matching  **********
-    Eigen::Matrix4d guess;
-    if (use_ego_vel)
-      guess = prev_trans_s2s * egovel_cum * msf_delta.matrix();
+    Eigen::Matrix4d guess;                                                  // 初始猜测变换矩阵
+    if (use_ego_vel)                                                        // 使用车辆速度信息，则乘以累积的车辆速度变换
+      guess = prev_trans_s2s * egovel_cum * msf_delta.matrix();             // 则 guess = 上一次扫描到扫描的变换 * 累积的车辆速度变换 * 扫描匹配的相对位姿变换   
     else
       guess = prev_trans_s2s * msf_delta.matrix();
 
     chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-    registration_s2s->align(*aligned, guess.cast<float>());
+    registration_s2s->align(*aligned, guess.cast<float>());                 // 进行点云配准，aligned存储配准后的点云
     chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
-    double time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1).count();
+    double time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1).count();    // 配准所需的时间
     s2s_matching_time.push_back(time_used);
 
+    // 发布扫描配准的状态信息，包括时间戳、点云的坐标系、配准后的电源、扫描匹配的来源msf_source、扫描匹配的相对位姿变换
     publish_scan_matching_status(stamp, cloud->header.frame_id, aligned, msf_source, msf_delta);
 
     // If not converged, use last transformation
-    if(!registration_s2s->hasConverged()) {
-      NODELET_INFO_STREAM("scan matching_ has not converged!!");
+    if(!registration_s2s->hasConverged()) {                               // 扫描到扫描的匹配未收敛,忽略当前帧，返回上一次的变换矩阵
+      NODELET_INFO_STREAM("scan matching_ has not converged!!");          
       NODELET_INFO_STREAM("ignore this frame(" << stamp << ")");
       if (enable_scan_to_map) return keyframe_pose_s2m * prev_trans_s2m;
       else return keyframe_pose_s2s * prev_trans_s2s;
     }
-    Eigen::Matrix4d trans_s2s = registration_s2s->getFinalTransformation().cast<double>();
-    odom_s2s_now = keyframe_pose_s2s * trans_s2s;
+    // 匹配收敛，获取最终的扫描到扫描的变换矩阵trans_s2s
+    Eigen::Matrix4d trans_s2s = registration_s2s->getFinalTransformation().cast<double>();   
+    odom_s2s_now = keyframe_pose_s2s * trans_s2s;                         // 得到当前时刻的扫描到扫描的位姿变换矩阵
 
     Eigen::Matrix4d trans_s2m;
     if (enable_scan_to_map){
       registration_s2m->align(*aligned, guess.cast<float>());
-      if(!registration_s2m->hasConverged()) {
+      if(!registration_s2m->hasConverged()) {                             // 扫描到地图的匹配未收敛
         NODELET_INFO_STREAM("scan matching_ has not converged!!");
         NODELET_INFO_STREAM("ignore this frame(" << stamp << ")");
         return keyframe_pose_s2m * prev_trans_s2m;
       }
-      trans_s2m = registration_s2m->getFinalTransformation().cast<double>();
-      odom_s2m_now = keyframe_pose_s2m * trans_s2m;
+      trans_s2m = registration_s2m->getFinalTransformation().cast<double>();// 变换矩阵
+      odom_s2m_now = keyframe_pose_s2m * trans_s2m;                         // 当前时刻的地图到扫描的位姿变换矩阵 odom_s2m_now
     }
 
     // Add abnormal judgment, that is, if the difference between the two frames matching point cloud 
     // transition matrix is too large, it will be discarded
-    bool thresholded = false;
-    if(enable_transform_thresholding) {
-      Eigen::Matrix4d radar_delta;
+    bool thresholded = false;                                                                     // 表示是否超过阈值
+    if(enable_transform_thresholding) {                                                           // 启用变换阈值判断
+      Eigen::Matrix4d radar_delta;                                                                // 两帧之间变换矩阵的差异
       if(enable_scan_to_map) radar_delta = prev_trans_s2m.inverse() * trans_s2m;
       else radar_delta = prev_trans_s2s.inverse() * trans_s2s;
-      double dx_rd = radar_delta.block<3, 1>(0, 3).norm();
+      double dx_rd = radar_delta.block<3, 1>(0, 3).norm();                                        // 平移部分的欧几里得范数(即平移量的长度)
       // double da_rd = std::acos(Eigen::Quaterniond(radar_delta.block<3, 3>(0, 0)).w())*180/M_PI;
       Eigen::AngleAxisd rotation_vector;
       rotation_vector.fromRotationMatrix(radar_delta.block<3, 3>(0, 0));
