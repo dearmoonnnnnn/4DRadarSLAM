@@ -339,7 +339,7 @@ private:
 
     //********** Publish PointCloud2 Format Raw Cloud **********
     sensor_msgs::PointCloud2 pc2_raw_msg;                       // 定义PointCloud2消息对象
-    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);                // 将pcl的点云数据radarcloud_raw转换为ROS中的PointCloud2格式(pc2_raw_msg)
+    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);                // 将pcl的点云数据(radarcloud_raw)转换为ROS中的PointCloud2格式(pc2_raw_msg)
     pc2_raw_msg.header.stamp = eagle_msg->header.stamp;         // 时间戳
     pc2_raw_msg.header.frame_id = baselinkFrame;                // 消息所在坐标系
     pc2_raw_pub.publish(pc2_raw_msg);                           // 发布消息到指定的话题/eagle_data/pc2_raw中
@@ -390,6 +390,7 @@ private:
       return;
     }
 
+    // 去除点云中的扭曲
     src_cloud = deskewing(src_cloud);
 
     // if baselinkFrame is defined, transform the input cloud to the frame
@@ -578,7 +579,7 @@ private:
       // TODO: transform IMU data into the LIDAR frame
       double delta_t = scan_period * static_cast<double>(i) / cloud->size();          // 计算每个点在扫描周期内的时间偏移
       Eigen::Quaternionf delta_q(1, delta_t / 2.0 * ang_v[0], delta_t / 2.0 * ang_v[1], delta_t / 2.0 * ang_v[2]);  // 在delta_t内发生的旋转
-      Eigen::Vector3f pt_ = delta_q.inverse() * pt.getVector3fMap();                  // 将点的三维坐标转换成 Vector3f 类型，然后乘以四元数的逆来应用去畸变变换
+      Eigen::Vector3f pt_ = delta_q.inverse() * pt.getVector3fMap();                  // 将点的三维坐标乘以四元数的逆来应用去畸变变换，并转换成 Vector3f 类型
 
       // 将去畸变后的点添加到新的点云中
       deskewed->at(i) = cloud->at(i);
