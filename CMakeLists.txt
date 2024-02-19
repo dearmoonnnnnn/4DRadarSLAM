@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 # 相对于原始项目，增加使用C++14标准的代码，避免出现std没有make_unique的问题
-set(CMAKE_CXX_STANDARD 14)  # 使用 C++14 标准
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_STANDARD 14)  # 使用 C++14 标准
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 cmake_minimum_required(VERSION 2.8.3)
 project(radar_graph_slam)
