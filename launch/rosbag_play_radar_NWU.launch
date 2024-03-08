@@ -1,0 +1,24 @@
+ <!-- rosbag_play_radar_NWU.launch -->
+
+<!-- This launch file loads rosbags and makes an octomap file -->
+
+<launch>
+
+<!-- <param name="/use_sim_time" value="true"/> -->
+
+<!-- paths to the rosbag files -->
+<arg name="path" default="/home/dearmoon/datasets/NWU/"/>
+
+<arg name = "file_0" default = "/日晴半室内低速2/4DRadar/RiQingBanShiNeiDiSu3.bag"/>
+<arg name = "file_1" default = "TingCheChangDiSu.bag"/>
+
+<!-- Plays the dataset. WARNING: changing 'rate' will cause interactions with the demo.  -->
+<!--  /radar_pcl /radar_trk -->
+<node pkg="rosbag" type="play" name="player"
+    args = "-s 0.5 --clock --rate=3 --duration=10000
+    $(arg path)$(arg file_0)
+    --topic /ars548_process/detection_point_cloud
+    ">
+</node>
+
+</launch>

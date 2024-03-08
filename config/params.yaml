@@ -1,7 +1,9 @@
 radar_slam:
 
   # Topics
-  pointCloudTopic: "/radar_enhanced_pcl"               # Point cloud data <!-- pc2_raw inlier_pc2 segmented -->
+  # pointCloudTopic: "/radar_enhanced_pcl"             # Point cloud data <!-- pc2_raw inlier_pc2 segmented -->
+  pointCloudTopic: "/ars548_process/detection_point_cloud"
+  
   imuTopic: "/vectornav/imu"                         # IMU data
   odomTopic: "/odom"                   # IMU pre-preintegration odometry, same frequency as IMU
   gpsTopic: "/ublox/fix"                   # GPS odometry topic from navsat, see module_navsat.launch file
