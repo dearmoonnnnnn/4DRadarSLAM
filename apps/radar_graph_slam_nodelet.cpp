@@ -133,8 +133,9 @@ public:
     barometer_edge_type = private_nh.param<int>("barometer_edge_type", 2);
     barometer_edge_stddev = private_nh.param<double>("barometer_edge_stddev", 0.5);
 
-    points_topic = private_nh.param<std::string>("points_topic", "/radar_enhanced_pcl");
-
+    // points_topic = private_nh.param<std::string>("points_topic", "/radar_enhanced_pcl");
+    points_topic = private_nh.param<std::string>("points_topic", "/ars548_process/detection_point_cloud");
+    
     show_sphere = private_nh.param<bool>("show_sphere", false);
 
     dataset_name = private_nh.param<std::string>("dataset_name", "");
@@ -201,6 +202,7 @@ private:
    * @param cloud_msg
    */
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
+
     const ros::Time& stamp = cloud_msg->header.stamp;
     Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                    // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
     Eigen::Matrix4d matrix_map2base;                                         // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系

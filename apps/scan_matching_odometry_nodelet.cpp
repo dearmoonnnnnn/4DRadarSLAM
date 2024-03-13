@@ -107,7 +107,8 @@ private:
    */
   void initialize_params() {
     auto& pnh = private_nh;
-    points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");           // 点云话题
+    // points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");           // 点云话题
+    points_topic = pnh.param<std::string>("points_topic", "/ars548_process/detection_point_cloud");           // 点云话题
     use_ego_vel = pnh.param<bool>("use_ego_vel", false);                                    // 是否使用车辆自我速度
 
     // The minimum tranlational distance and rotation angle between keyframes_.
@@ -356,6 +357,17 @@ private:
     if(!ros::ok()) {
       return;
     }
+
+    // std::cout << "-----------point_callback-scan_matching_odometry_nodelet.cpp-----------------" << std::endl;
+    // if (cloud_msg == nullptr)
+    // {
+    //   ROS_WARN("Received empty point cloud message");
+    // }
+    // else
+    // {
+    //   ROS_INFO("Received point cloud message with %u points", cloud_msg->width * cloud_msg->height);
+    //   // Received point cloud message with 0 points???
+    // }
 
     // 从点云信息提取时间戳
     timeLaserOdometry = cloud_msg->header.stamp.toSec();

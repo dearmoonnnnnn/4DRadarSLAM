@@ -292,9 +292,9 @@ private:
   // 回调函数，处理sensor_msgs::PointCloud消息类型的数据
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
-    std::cout << "------------------------------cloud_callback--------------------------------" << std::endl;
-    std::cout << "channels[0].name: " << eagle_msg-> channels[0].name << std::endl;
-    std::cout << "channels[1].name: " << eagle_msg-> channels[1].name << std::endl;
+    // std::cout << "------------------------------cloud_callback--------------------------------" << std::endl;
+    // std::cout << "channels[0].name: " << eagle_msg-> channels[0].name << std::endl;
+    // std::cout << "channels[1].name: " << eagle_msg-> channels[1].name << std::endl;
     
     // 定义两种不同的点云类型和它们的指针
     RadarPointCloudType radarpoint_raw;            // 原始点云，带有x、y、z、强度和多普勒速度信息
@@ -369,6 +369,18 @@ private:
             // 将点添加到点云中
             radarcloud_raw->points.push_back(radarpoint_raw);
             radarcloud_xyzi->points.push_back(radarpoint_xyzi);
+
+
+            // if (radarcloud_raw == nullptr)
+            // {
+            //   ROS_WARN("Received empty point cloud message");
+            // }
+            // else
+            // {
+            //   // ROS_INFO("Received point cloud message with %u points", radarcloud_raw->width * radarcloud_raw->height);
+            //   ROS_INFO("Received point cloud message with %lu points", radarcloud_raw->points.size());
+              
+            // }
         }
         
     }
@@ -450,10 +462,25 @@ private:
     }
 
     // 对点云依次进行距离过滤、下采样、离群点去除
-    pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);        
+    pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);     
     // filtered = passthrough(filtered);
     filtered = downsample(filtered);                
-    filtered = outlier_removal(filtered);
+
+    // if (filtered == nullptr)
+    // {
+    //   ROS_WARN("Received empty point cloud message");
+    // }
+    // else
+    // {
+    //   // ROS_INFO("Received point cloud message with %u points", radarcloud_raw->width * radarcloud_raw->height);
+    //   // 此处点云数量正常
+    //   ROS_INFO("Received point cloud message with %lu points", filtered->points.size());
+      
+    // }
+
+    // filtered = outlier_removal(filtered);
+    // 此处输出为0，由于点云数量稀疏，所有的点都被当成离群点
+    // ROS_INFO("After outlier_removal, Received point cloud message with %lu points", filtered->points.size());
 
     // Distance Histogram      计算点云中不同距离范围内点的数量，形成一个距离直方图
     static size_t num_frame = 0;            // 帧数
