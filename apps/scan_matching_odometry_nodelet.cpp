@@ -358,23 +358,12 @@ private:
       return;
     }
 
-    // std::cout << "-----------point_callback-scan_matching_odometry_nodelet.cpp-----------------" << std::endl;
-    // if (cloud_msg == nullptr)
-    // {
-    //   ROS_WARN("Received empty point cloud message");
-    // }
-    // else
-    // {
-    //   ROS_INFO("Received point cloud message with %u points", cloud_msg->width * cloud_msg->height);
-    //   // Received point cloud message with 0 points???
-    // }
-
     // 从点云信息提取时间戳
     timeLaserOdometry = cloud_msg->header.stamp.toSec();
     double this_cloud_time = cloud_msg->header.stamp.toSec();
     static double last_cloud_time = this_cloud_time;
 
-    // 计算累积的自我速度
+    // 计算当前点云和上一帧点云之间的累积线速度
     double dt = this_cloud_time - last_cloud_time;                      // 连续点云之间的时间差 = 当前点云时间 - 之前的点云时间
     double egovel_cum_x = twistMsg->twist.twist.linear.x * dt;
     double egovel_cum_y = twistMsg->twist.twist.linear.y * dt;
@@ -383,6 +372,7 @@ private:
     if (pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2) > pow(max_egovel_cum, 2));
     else egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
     
+    // 将last_cloud_time 更新为当前时间戳，以便下一次调用使用
     last_cloud_time = this_cloud_time;
 
     // 将ROS点云消息转换为PCL点云消息

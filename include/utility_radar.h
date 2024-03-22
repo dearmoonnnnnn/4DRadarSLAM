@@ -143,7 +143,7 @@ public:
         nh.param<std::string>("radar_slam/pointCloudTopic", pointCloudTopic, "/ars548_process/detection_point_cloud");
         // nh.param<std::string>("radar_slam/pointCloudTopic", pointCloudTopic, "/radar_enhanced_pcl");
         
-        nh.param<std::string>("radar_slam/imuTopic", imuTopic, "/vectornav/imu");
+        nh.param<std::string>("radar_slam/imuTopic", imuTopic, "/livox/imu");
         nh.param<std::string>("radar_slam/odomTopic", odomTopic, "/odom");
         nh.param<std::string>("radar_slam/gpsTopic", gpsTopic, "/ublox/fix");
 

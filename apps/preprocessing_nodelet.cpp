@@ -85,30 +85,41 @@ public:
 
 private:
   void initializeTransformation(){
-    livox_to_RGB = (cv::Mat_<double>(4,4) << 
-    -0.006878330000, -0.999969000000, 0.003857230000, 0.029164500000,  
-    -7.737180000000E-05, -0.003856790000, -0.999993000000, 0.045695200000,
-     0.999976000000, -0.006878580000, -5.084110000000E-05, -0.19018000000,
-    0,  0,  0,  1);
-    RGB_to_livox =livox_to_RGB.inv();
-    Thermal_to_RGB = (cv::Mat_<double>(4,4) <<
-    0.9999526089706319, 0.008963747151337641, -0.003798822163962599, 0.18106962419014,  
-    -0.008945181135788245, 0.9999481006917174, 0.004876439015823288, -0.04546324090016857,
-    0.00384233617405678, -0.004842226763999368, 0.999980894463835, 0.08046453079998771,
-    0,0,0,1);
-    Radar_to_Thermal = (cv::Mat_<double>(4,4) <<
-    0.999665,    0.00925436,  -0.0241851,  -0.0248342,
-    -0.00826999, 0.999146,    0.0404891,   0.0958317,
-    0.0245392,   -0.0402755,  0.998887,    0.0268037,
-    0,  0,  0,  1);
-    Change_Radarframe=(cv::Mat_<double>(4,4) <<
-    0,-1,0,0,
-    0,0,-1,0,
-    1,0,0,0,
-    0,0,0,1);
-    Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
-    std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
-  }
+
+    /*************** 作者原数据  ****************/
+    // livox_to_RGB = (cv::Mat_<double>(4,4) << 
+    // -0.006878330000, -0.999969000000, 0.003857230000, 0.029164500000,  
+    // -7.737180000000E-05, -0.003856790000, -0.999993000000, 0.045695200000,
+    //  0.999976000000, -0.006878580000, -5.084110000000E-05, -0.19018000000,
+    // 0,  0,  0,  1);
+    // RGB_to_livox =livox_to_RGB.inv();
+    // Thermal_to_RGB = (cv::Mat_<double>(4,4) <<
+    // 0.9999526089706319, 0.008963747151337641, -0.003798822163962599, 0.18106962419014,  
+    // -0.008945181135788245, 0.9999481006917174, 0.004876439015823288, -0.04546324090016857,
+    // 0.00384233617405678, -0.004842226763999368, 0.999980894463835, 0.08046453079998771,
+    // 0,0,0,1);
+    // Radar_to_Thermal = (cv::Mat_<double>(4,4) <<
+    // 0.999665,    0.00925436,  -0.0241851,  -0.0248342,
+    // -0.00826999, 0.999146,    0.0404891,   0.0958317,
+    // 0.0245392,   -0.0402755,  0.998887,    0.0268037,
+    // 0,  0,  0,  1);
+    // Change_Radarframe=(cv::Mat_<double>(4,4) <<
+    // 0,-1,0,0,
+    // 0,0,-1,0,
+    // 1,0,0,0,
+    // 0,0,0,1);
+    // Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
+    // std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
+
+    /************** 自己采集的数据 ***************/
+    Radar_to_livox=(cv::Mat_<double>(4,4) <<
+    0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.1060016945940701,
+    0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
+    -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.154543126256660535,
+    0, 0, 0, 1);
+
+    }
+  
   void initializeParams() {
     // 降采样方法、分辨率
     std::string downsample_method = private_nh.param<std::string>("downsample_method", "VOXELGRID");
@@ -350,8 +361,16 @@ private:
             if (eagle_msg->points[i].x == INFINITY || eagle_msg->points[i].y == INFINITY || eagle_msg->points[i].z == INFINITY) continue;
            
             // 将点从雷达坐标系转换到Livox坐标系
+            // ptMat:雷达坐标系的点
+            // dstMat:livox坐标系的点
             cv::Mat ptMat, dstMat;
-            ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1);    
+            // ptMat为四行一列的矩阵，值分别为点云的xyz坐标和一个额外的1，便于矩阵乘法运算
+            ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1); 
+            // std::cout << "points[i].x :" << eagle_msg->points[i].x << std::endl;
+            // std::cout << "points[i].y :" << eagle_msg->points[i].y << std::endl;
+            // std::cout << "points[i].z :" << eagle_msg->points[i].z << std::endl; 
+            // std::cout << "ptMAt :" << ptMat << std::endl;  
+
             // Perform matrix multiplication and save as Mat_ for easy element access
             dstMat= Radar_to_livox * ptMat;
 
@@ -369,18 +388,6 @@ private:
             // 将点添加到点云中
             radarcloud_raw->points.push_back(radarpoint_raw);
             radarcloud_xyzi->points.push_back(radarpoint_xyzi);
-
-
-            // if (radarcloud_raw == nullptr)
-            // {
-            //   ROS_WARN("Received empty point cloud message");
-            // }
-            // else
-            // {
-            //   // ROS_INFO("Received point cloud message with %u points", radarcloud_raw->width * radarcloud_raw->height);
-            //   ROS_INFO("Received point cloud message with %lu points", radarcloud_raw->points.size());
-              
-            // }
         }
         
     }
@@ -465,20 +472,8 @@ private:
     pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);     
     // filtered = passthrough(filtered);
     filtered = downsample(filtered);                
-
-    // if (filtered == nullptr)
-    // {
-    //   ROS_WARN("Received empty point cloud message");
-    // }
-    // else
-    // {
-    //   // ROS_INFO("Received point cloud message with %u points", radarcloud_raw->width * radarcloud_raw->height);
-    //   // 此处点云数量正常
-    //   ROS_INFO("Received point cloud message with %lu points", filtered->points.size());
-      
-    // }
-
     // filtered = outlier_removal(filtered);
+
     // 此处输出为0，由于点云数量稀疏，所有的点都被当成离群点
     // ROS_INFO("After outlier_removal, Received point cloud message with %lu points", filtered->points.size());
 
