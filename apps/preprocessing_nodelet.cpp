@@ -233,6 +233,7 @@ private:
 
   // 处理Imu数据并发布，同时发布和Imu数据时间戳对应的Ground Truth数据(Odom消息)
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
+    std::cout << "-------- preprocessing_nodelet::imu_callback--------" << std::endl;
     sensor_msgs::Imu imu_data;
     // imu_data的头部信息
     imu_data.header.stamp = imu_msg->header.stamp;

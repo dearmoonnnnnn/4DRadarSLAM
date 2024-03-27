@@ -308,7 +308,7 @@ private:
   // 根据IMU数据的四元数部分计算初始的机器人初始位姿矩阵`initial_pose`
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
     // Transform to Radar's Frame
-    // 从imu数据中获取四元数，并进行坐标系变换
+    // 从imu数据中获取四元数，并进行坐标系变换,将IMU数据转换到雷达坐标
     geometry_msgs::QuaternionStamped::Ptr imu_quat(new geometry_msgs::QuaternionStamped);
     imu_quat->quaternion = imu_odom_msg->orientation;
     Eigen::Quaterniond imu_quat_from(imu_quat->quaternion.w, imu_quat->quaternion.x, imu_quat->quaternion.y, imu_quat->quaternion.z);
@@ -316,7 +316,7 @@ private:
     imu_quat_deskew.normalize();
 
     static int cnt = 0;
-    if(cnt == 0) {
+    if(cnt == 0) {      // 在第一次执行回调函数时运行如下代码
       double roll, pitch, yaw;
       tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w());
       tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation);
@@ -1101,18 +1101,18 @@ private:
 
   void nmea_callback(const nmea_msgs::SentenceConstPtr& nmea_msg) {
     GPRMC grmc = nmea_parser->parse(nmea_msg->sentence);
-    if(grmc.status != 'A')
+    if(grmc.status != 'A')        // GPRMC数据中的状态字段，如果状态不是A，表示数据不可用
       return;
     geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
     gps_msg->header = nmea_msg->header;
-    gps_msg->position.latitude = grmc.latitude;
-    gps_msg->position.longitude = grmc.longitude;
+    gps_msg->position.latitude = grmc.latitude;   //解析纬度
+    gps_msg->position.longitude = grmc.longitude; //解析经度
     gps_msg->position.altitude = NAN;
     gps_callback(gps_msg);
   }
 
   void navsat_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg) {
-    sensor_msgs::NavSatFix gps_msg;
+    sensor_msgs::NavSatFix gps_msg;             
     gps_msg.header = navsat_msg->header;
     gps_msg.latitude = navsat_msg->latitude;
     gps_msg.longitude = navsat_msg->longitude;
@@ -1120,7 +1120,7 @@ private:
     gps_msg.position_covariance = navsat_msg->position_covariance;
     gps_msg.position_covariance_type = navsat_msg->position_covariance_type;
     gps_msg.status = navsat_msg->status;
-    gps_navsat_queue.push_back(gps_msg);
+    gps_navsat_queue.push_back(gps_msg);            // 将gps数据存储到gps_navsat_queue
   }
 
   /**
@@ -1128,9 +1128,9 @@ private:
    * @param gps_msg
    */
   void gps_callback(const geographic_msgs::GeoPointStampedPtr& gps_msg) {
-    std::lock_guard<std::mutex> lock(gps_queue_mutex);
-    gps_msg->header.stamp += ros::Duration(gps_time_offset);
-    gps_geopoint_queue.push_back(gps_msg);
+    std::lock_guard<std::mutex> lock(gps_queue_mutex);        // 对gps队列进行加锁
+    gps_msg->header.stamp += ros::Duration(gps_time_offset);  // 使用gps的时间间隔gps_time_offset对GPS数据进行时间校正或调整
+    gps_geopoint_queue.push_back(gps_msg);                    // 将经过校正后的gps数据添加到队列中
   }
 
   /**
@@ -1144,10 +1144,12 @@ private:
       return false;
     }
     
-    bool updated = false;
+    bool updated = false;                                   // 标记是否有GPS数据被更新
     auto gps_cursor = gps_navsat_queue.begin();
 
+    // 遍历关键帧队列
     for(auto& keyframe : keyframes) {
+      // 若当前关键帧的索引与上一个GPS边索引之间的时间间隔小于阈值，跳过当前关键帧的循环
       if (keyframe->index - last_gps_edge_index < gps_edge_intervals) continue;
       if (keyframe->stamp > gps_navsat_queue.back().header.stamp) {
         break;

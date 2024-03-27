@@ -168,19 +168,21 @@ private:
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
     
     Eigen::Quaterniond imu_quat_from(imu_msg->orientation.w, imu_msg->orientation.x, imu_msg->orientation.y, imu_msg->orientation.z);
-    Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;            // 通过预定义的extQRPY对IMU方向进行去扰动
+    Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;            // 通过预定义的extQRPY对IMU方向进行去扰动，补偿安装时的偏差，使其与激光雷达坐标系对齐。
     imu_quat_deskew.normalize();                                             // 归一化去扰动后的四元数
 
     double roll, pitch, yaw;                                                
     // tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation); 
     tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w()); // 将去扰动后的四元数转换为TF库中的四元数。
     tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);                      // 使用TF库计算RPY角
-    imuPointerLast = (imuPointerLast + 1) % imuQueLength;                     // 更新IMU队列的指针
-    imuTime[imuPointerLast] = imu_msg->header.stamp.toSec();                  // IMU消息的时间戳
-    imuRoll[imuPointerLast] = roll;                                           // IMU消息的滚转角
-    imuPitch[imuPointerLast] = pitch;                                         // IMU消息的俯仰角
+    // 更新IMU队列的指针，将当前IMU消息的时间戳、滚转角和俯仰角存储在相应的数组中。这是为了保存一段时间内的IMU数据，以便后续进行数据融合或其他处理。
+    imuPointerLast = (imuPointerLast + 1) % imuQueLength;                     
+    imuTime[imuPointerLast] = imu_msg->header.stamp.toSec();                  
+    imuRoll[imuPointerLast] = roll;                                           
+    imuPitch[imuPointerLast] = pitch;                                         
     // cout << "get imu rp: " << roll << " " << pitch << endl;
 
+    // 创建一个新的IMU消息，将去扰动后的四元数作为消息的方向，并将角速度、加速度等数据复制进去
     sensor_msgs::ImuPtr imu(new sensor_msgs::Imu);
     imu->header = imu_msg->header;
     imu->angular_velocity = imu_msg->angular_velocity; imu->linear_acceleration = imu_msg->linear_acceleration;
