@@ -523,16 +523,17 @@ private:
       // std::cout << "baro position: " << aftmapped_pos(0) << ", " << aftmapped_pos(1) << ", " << aftmapped_pos(2) << std::endl;
       
       nav_msgs::Odometry initial_odom; // Initial posture
-      initial_odom = matrix2odom(keyframe->stamp, initial_pose, mapFrame, baselinkFrame);
+      initial_odom = matrix2odom(keyframe->stamp, initial_pose, mapFrame, baselinkFrame);   // 将关键帧位姿转换为里程计信息
  
-      Eigen::Vector1d z(aftmapped_pos(2));
+      Eigen::Vector1d z(aftmapped_pos(2));                                                  // 提取高度信息   
       // the first barometer data position will be the origin of the map
-      if(!zero_alt) {
+      if(!zero_alt) {                                                                       // 如果是第一个气压计数据，将其设置为高度的原点
         zero_alt = z;
       }
-      z -= (*zero_alt);
+      z -= (*zero_alt);                                                                     // 相对于原点的高度
       keyframe->altitude = z;
 
+      // 如果启用了气压计，则根据不同的边类型添加图优化边。
       if (enable_barometer){ 
         //********** G2O Edge *********** 
         if (barometer_edge_type == 1){
@@ -551,8 +552,10 @@ private:
       }
       updated = true;
     }
+
+    // 找到要删除的气压计的位置，并且删除已经处理过的气压计数据
     auto remove_loc = std::upper_bound(barometer_queue.begin(), barometer_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const barometer_bmp388::BarometerConstPtr& baropoint) { return stamp < baropoint->header.stamp; });
-    barometer_queue.erase(barometer_queue.begin(), remove_loc);
+    barometer_queue.erase(barometer_queue.begin(), remove_loc);     
     return updated;
   }
 
@@ -561,32 +564,34 @@ private:
    * @return if true, at least one keyframe_ was added to the pose graph
    */
   bool flush_keyframe_queue() {
-    std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
+    std::lock_guard<std::mutex> lock(keyframe_queue_mutex);     // 获取关键帧队列的互斥锁
 
-    if(keyframe_queue.empty()) {
+    if(keyframe_queue.empty()) {                                // 关键帧队列为空，返回false
       return false;
     }
 
     trans_odom2map_mutex.lock();
-    Eigen::Isometry3d odom2map(trans_odom2map.cast<double>());
+    Eigen::Isometry3d odom2map(trans_odom2map.cast<double>());  // 里程计到地图的转换矩阵
     trans_odom2map_mutex.unlock();
 
-    int num_processed = 0;
+    int num_processed = 0;                                      // 已处理的关键帧数量
     // ********** Select number of keyframess to be optimized **********
+    // 遍历关键帧队列，最多处理max_keyframes_per_update个关键帧
     for(int i = 0; i < std::min<int>(keyframe_queue.size(), max_keyframes_per_update); i++) {
       num_processed = i;
 
-      const auto& keyframe = keyframe_queue[i];
+      const auto& keyframe = keyframe_queue[i];                 // 获取当前关键帧
       // new_keyframess will be tested later for loop closure
-      new_keyframes.push_back(keyframe);
+      new_keyframes.push_back(keyframe);                        // 将当前关键帧添加到new_keyframes向量中，用于后续的回环检测
 
       // add pose node
-      Eigen::Isometry3d odom = odom2map * keyframe->odom_scan2scan;
+      Eigen::Isometry3d odom = odom2map * keyframe->odom_scan2scan;         // 计算当前关键帧在地图坐标系下的位姿
       // ********** Vertex of keyframess is contructed here ***********
-      keyframe->node = graph_slam->add_se3_node(odom);
-      keyframe_hash[keyframe->stamp] = keyframe;
+      keyframe->node = graph_slam->add_se3_node(odom);                      // 在位姿图中添加当前关键帧的节点
+      keyframe_hash[keyframe->stamp] = keyframe;                            // 将当前关键帧的时间戳和关键帧指针存储到keyframe_hash中
 
-      // fix the first node
+      // fix the first node 
+      // 如果当前关键帧是第一个关键帧，并且设置了固定第一个节点，则创建一个锚点节点和锚点边。
       if(keyframes.empty() && new_keyframes.size() == 1) {
         if(private_nh.param<bool>("fix_first_node", false)) {
           Eigen::MatrixXd inf = Eigen::MatrixXd::Identity(6, 6);
@@ -607,16 +612,16 @@ private:
       }
 
       /***** Scan-to-Scan Add edge to between consecutive keyframes *****/
-      const auto& prev_keyframe = i == 0 ? keyframes.back() : keyframe_queue[i - 1];
+      const auto& prev_keyframe = i == 0 ? keyframes.back() : keyframe_queue[i - 1];                        // 获取前一个关键帧
       // relative pose between odom of previous frame and this frame R2=R12*R1 => R12 = inv(R2) * R1
-      Eigen::Isometry3d relative_pose = keyframe->odom_scan2scan.inverse() * prev_keyframe->odom_scan2scan;
+      Eigen::Isometry3d relative_pose = keyframe->odom_scan2scan.inverse() * prev_keyframe->odom_scan2scan; // 计算当前帧和前一个关键帧之间的相对位姿
       // calculate fitness score as information 
-      Eigen::MatrixXd information = inf_calclator->calc_information_matrix(keyframe->cloud, prev_keyframe->cloud, relative_pose);
-      auto edge = graph_slam->add_se3_edge(keyframe->node, prev_keyframe->node, relative_pose, information);
+      Eigen::MatrixXd information = inf_calclator->calc_information_matrix(keyframe->cloud, prev_keyframe->cloud, relative_pose); // 计算当前帧和前一个关键帧之间的信息矩阵
+      auto edge = graph_slam->add_se3_edge(keyframe->node, prev_keyframe->node, relative_pose, information);                      // 在位姿图中添加当前关键帧和前一个关键帧之间的里程计边
       // cout << information << endl;
-      graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("odometry_edge_robust_kernel", "NONE"), private_nh.param<double>("odometry_edge_robust_kernel_size", 1.0));
+      graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("odometry_edge_robust_kernel", "NONE"), private_nh.param<double>("odometry_edge_robust_kernel_size", 1.0));  //为里程计边添加鲁棒核函数
       
-
+      // 如果启用了预积分，则添加预积分边
       if (enable_preintegration){
         // Add Preintegration edge
         geometry_msgs::Transform relative_trans = keyframe->trans_integrated;
@@ -635,6 +640,7 @@ private:
       }
     }
 
+    // 发布读取点云数据的时间戳
     std_msgs::Header read_until;
     read_until.stamp = keyframe_queue[num_processed]->stamp + ros::Duration(10, 0);
     read_until.frame_id = points_topic;
@@ -642,6 +648,7 @@ private:
     read_until.frame_id = "/filtered_points";
     read_until_pub.publish(read_until);
 
+    // 从关键帧队列中删除已处理的关键帧
     keyframe_queue.erase(keyframe_queue.begin(), keyframe_queue.begin() + num_processed + 1);
     return true;
   }
