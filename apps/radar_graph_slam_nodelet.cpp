@@ -478,21 +478,27 @@ private:
 
   // 将气压计数据和关键帧对齐，从而提供相对于机器人起始点的高度信息
   bool flush_barometer_queue() {
-    std::lock_guard<std::mutex> lock(barometer_queue_mutex);
-    if(keyframes.empty() || barometer_queue.empty()) {
-      return false;
+    std::lock_guard<std::mutex> lock(barometer_queue_mutex); // 获取barometer_queue_mutex的锁，确保线程安全
+    if(keyframes.empty() || barometer_queue.empty()) {       // 如果keyframes或barometer_queue为空
+      return false;                                          // 返回false，表示没有更新
     }
-    bool updated = false;
-    auto barometer_cursor = barometer_queue.begin();
+    bool updated = false;                                    // 跟踪是否进行了更新
+    auto barometer_cursor = barometer_queue.begin();         // barometer_cursor指向barometer_queue的开始位置
 
+    // 遍历关键帧
     for(size_t i=0; i < keyframes.size(); i++) {
       auto keyframe = keyframes.at(i);
+
+      // 若关键帧的时间戳大于barometer_queue的最后一个数据的时间戳，跳出循环
       if(keyframe->stamp > barometer_queue.back()->header.stamp) {
         break;
       }
+      // 若关键帧的时间戳小于barometer_cursor指向的气压计数据的时间戳，或者已经有高度信息，继续下一次循环
       if(keyframe->stamp < (*barometer_cursor)->header.stamp || keyframe->altitude) {
         continue;
       }
+
+
       // find the barometer data which is closest to the keyframe_
       auto closest_barometer = barometer_cursor;
       for(auto baro = barometer_cursor; baro != barometer_queue.end(); baro++) {
@@ -503,19 +509,22 @@ private:
         }
         closest_barometer = baro;
       }
+
+      // 关键帧与最接近的气压计之间的时间残差过大，跳过该关键帧
       // if the time residual between the barometer and keyframe_ is too large, skip it
       barometer_cursor = closest_barometer;
       if(0.2 < std::abs(((*closest_barometer)->header.stamp - keyframe->stamp).toSec())) {
         continue;
       }
 
+      // 构建关键帧在地图坐标系下的位置，包括x、y坐标和气压计高度
       Eigen::Vector4d aftmapped_pos(keyframe->odom_scan2scan.translation().x(), keyframe->odom_scan2scan.translation().y(), (*closest_barometer)->altitude, 1.0);
-      aftmapped_pos = initial_pose * aftmapped_pos;
+      aftmapped_pos = initial_pose * aftmapped_pos;         // 将关键帧位姿转换为里程计信息
       // std::cout << "baro position: " << aftmapped_pos(0) << ", " << aftmapped_pos(1) << ", " << aftmapped_pos(2) << std::endl;
       
       nav_msgs::Odometry initial_odom; // Initial posture
       initial_odom = matrix2odom(keyframe->stamp, initial_pose, mapFrame, baselinkFrame);
-
+ 
       Eigen::Vector1d z(aftmapped_pos(2));
       // the first barometer data position will be the origin of the map
       if(!zero_alt) {
