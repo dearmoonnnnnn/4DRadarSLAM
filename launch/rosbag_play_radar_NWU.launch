@@ -11,14 +11,15 @@
 
 <arg name = "file_0" default = "/日晴半室内低速2/merged.bag"/>
 <arg name = "file_1" default = "TingCheChangDiSu.bag"/>
-<arg name = "file_3" default = "/日晴不颠簸低速3/4DRadar/RiQingBuDianBoDiSu3.bag"/>
+<arg name = "file_2" default = "/日晴不颠簸低速3/4DRadar/RiQingBuDianBoDiSu3.bag"/>
+<arg name = "file_3" default = "/日晴不颠簸低速3/4DRadar/enhanced/enhanced_point_cloud.bag"/>
 
 <!-- Plays the dataset. WARNING: changing 'rate' will cause interactions with the demo.  -->
-<!--  /radar_pcl /radar_trk -->
+<!--  /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
 <node pkg="rosbag" type="play" name="player"
     args = "-s 0.5 --clock --rate=3 --duration=10000
     $(arg path)$(arg file_3)
-    --topic /ars548_process/detection_point_cloud 
+    --topic /enhanced_point_cloud
     ">
 </node>
 

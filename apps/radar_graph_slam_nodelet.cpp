@@ -135,6 +135,8 @@ public:
 
     // points_topic = private_nh.param<std::string>("points_topic", "/radar_enhanced_pcl");
     points_topic = private_nh.param<std::string>("points_topic", "/ars548_process/detection_point_cloud");
+    // points_topic = private_nh.param<std::string>("points_topic", "/enhanced_point_cloud");
+    
     
     show_sphere = private_nh.param<bool>("show_sphere", false);
 

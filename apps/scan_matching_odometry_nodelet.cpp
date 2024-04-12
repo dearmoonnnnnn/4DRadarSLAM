@@ -109,13 +109,20 @@ private:
     auto& pnh = private_nh;
     // points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");           // 点云话题
     points_topic = pnh.param<std::string>("points_topic", "/ars548_process/detection_point_cloud");           // 点云话题
+    // points_topic = pnh.param<std::string>("points_topic", "/enhanced_point_cloud");
+
     use_ego_vel = pnh.param<bool>("use_ego_vel", false);                                    // 是否使用车辆自我速度
 
     // The minimum tranlational distance and rotation angle between keyframes_.
     // If this value is zero, frames are always compared with the previous frame
-    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);                 // 关键帧之间的最小平移距离
-    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);                 // 关键帧之间的最小旋转角度
-    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);                    // 关键帧之间的最小时间间隔
+    // keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);                 // 关键帧之间的最小平移距离
+    // keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);                 // 关键帧之间的最小旋转角度
+    // keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);                    // 关键帧之间的最小时间间隔
+    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.15);                 // 关键帧之间的最小平移距离
+    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.05);                 // 关键帧之间的最小旋转角度
+    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 0.1);                    // 关键帧之间的最小时间间隔
+
+
 
     // Registration validation by thresholding
     enable_transform_thresholding = pnh.param<bool>("enable_transform_thresholding", false);// 是否启用通过阈值判断进行配准验证
@@ -431,7 +438,8 @@ private:
    * @return the relative pose between the input cloud and the keyframe_ cloud
    */
   Eigen::Matrix4d matching(const ros::Time& stamp, const pcl::PointCloud<PointT>::ConstPtr& cloud) {
-    if(!keyframe_cloud_s2s) {                               // 若关键帧点云不为空
+    // 若关键帧点云为空，说明是第一帧
+    if(!keyframe_cloud_s2s) {                               
       prev_time = ros::Time();                              // 将上一次处理的时间戳prev_time设置为零
       prev_trans_s2s.setIdentity();                         // 将上一次的相对姿态变换prev_trans_s2s设置为单位矩阵
       keyframe_pose_s2s.setIdentity();                      // 将关键帧的位姿设置为单位矩阵
@@ -448,6 +456,7 @@ private:
       }
       return Eigen::Matrix4d::Identity();                   // 由于当前是第一帧，相对姿态尚未计算，因此直接返回单位矩阵
     }
+
     // auto filtered = downsample(cloud);
     auto filtered = cloud;
     // Set Source Cloud
@@ -478,8 +487,8 @@ private:
     // 发布扫描配准的状态信息，包括时间戳、点云的坐标系、配准后的电源、扫描匹配的来源msf_source、扫描匹配的相对位姿变换
     publish_scan_matching_status(stamp, cloud->header.frame_id, aligned, msf_source, msf_delta);
 
-    // If not converged, use last transformation
-    if(!registration_s2s->hasConverged()) {                               // 扫描到扫描的匹配未收敛,忽略当前帧，返回上一次的变换矩阵
+    // If not converged, use last transformation，扫描到扫描的匹配未收敛,忽略当前帧，返回上一次的变换矩阵
+    if(!registration_s2s->hasConverged()) {                               
       NODELET_INFO_STREAM("scan matching_ has not converged!!");          
       NODELET_INFO_STREAM("ignore this frame(" << stamp << ")");
       if (enable_scan_to_map) return keyframe_pose_s2m * prev_trans_s2m;

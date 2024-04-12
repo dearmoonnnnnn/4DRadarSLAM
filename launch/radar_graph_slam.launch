@@ -61,7 +61,7 @@
     <!-- Ego Velocity Estimation -->
     <param name="enable_dynamic_object_removal" value="$(arg enable_dynamic_object_removal)" />
     <!-- ground truth publication -->
-    <param name="gt_file_location" value="/home/zhuge/datasets/Radar/gt_carpark1.txt" />
+    <param name="gt_file_location" value="/home/dearmoon/datasets/NWU/gt/rqbdbds.txt" />
   </node>
 
 
