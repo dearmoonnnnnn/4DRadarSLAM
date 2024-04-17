@@ -139,8 +139,8 @@ private:
     enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);                      // 是否启用从激光雷达扫描到地图的配准
     max_submap_frames = pnh.param<int>("max_submap_frames", 5);                             // 子地图包含的最大帧数
 
-    enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", false);                 // 是否启用Imu数据融合
-    imu_debug_out = private_nh.param<bool>("imu_debug_out", false);                         // 是否启用IMU调试输出
+    enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", true);                 // 是否启用Imu数据融合
+    imu_debug_out = private_nh.param<bool>("imu_debug_out", true);                         // 是否启用IMU调试输出
     cout << "enable_imu_fusion = " << enable_imu_fusion << endl;
     imu_fusion_ratio = private_nh.param<double>("imu_fusion_ratio", 0.1);                   // IMU数据融合比例
 
