@@ -71,6 +71,9 @@ public:
   virtual ~ScanMatchingOdometryNodelet() {}
 
   virtual void onInit() {
+    pointcallback_count = 0;
+    imu_callback_count = 0;
+
     NODELET_DEBUG("initializing scan_matching_odometry_nodelet...");
     nh = getNodeHandle();
     mt_nh = getMTNodeHandle();
@@ -173,7 +176,9 @@ private:
   }
 
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
-    
+
+    std::cout << "-------- scan_matching_odometry_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" <<std::endl;
+
     Eigen::Quaterniond imu_quat_from(imu_msg->orientation.w, imu_msg->orientation.x, imu_msg->orientation.y, imu_msg->orientation.z);
     Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;            // 通过预定义的extQRPY对IMU方向进行去扰动，补偿安装时的偏差，使其与激光雷达坐标系对齐。
     imu_quat_deskew.normalize();                                             // 归一化去扰动后的四元数
@@ -211,6 +216,8 @@ private:
       cnt = 1;
     }
     
+     std::cout << "-------- scan_matching_odometry_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" <<std::endl;
+
   }
 
 
@@ -363,6 +370,9 @@ private:
    * @param cloud_msg  point cloud msg
    */
   void pointcloud_callback(const geometry_msgs::TwistWithCovarianceStampedConstPtr& twistMsg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
+    
+    std::cout << "-------- scan_matching_odometry_nodelet pointcallback started, cout：" << ++pointcallback_count << "--------" <<std::endl;
+    
     if(!ros::ok()) {
       return;
     }
@@ -403,6 +413,9 @@ private:
 
     read_until->frame_id = "/filtered_points";
     read_until_pub.publish(read_until);
+
+
+    std::cout << "-------- scan_matching_odometry_nodelet point_callback finished, cout：" << pointcallback_count << "--------" <<std::endl;
   }
 
 
@@ -728,6 +741,11 @@ private:
   }
 
 private:
+
+  // debug
+  int pointcallback_count;
+  int imu_callback_count;
+
   // ROS topics
   ros::NodeHandle nh;
   ros::NodeHandle mt_nh;

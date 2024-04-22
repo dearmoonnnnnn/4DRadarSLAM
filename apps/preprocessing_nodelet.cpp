@@ -87,29 +87,29 @@ private:
   void initializeTransformation(){
 
     /*************** 作者原数据  ****************/
-    // livox_to_RGB = (cv::Mat_<double>(4,4) << 
-    // -0.006878330000, -0.999969000000, 0.003857230000, 0.029164500000,  
-    // -7.737180000000E-05, -0.003856790000, -0.999993000000, 0.045695200000,
-    //  0.999976000000, -0.006878580000, -5.084110000000E-05, -0.19018000000,
-    // 0,  0,  0,  1);
-    // RGB_to_livox =livox_to_RGB.inv();
-    // Thermal_to_RGB = (cv::Mat_<double>(4,4) <<
-    // 0.9999526089706319, 0.008963747151337641, -0.003798822163962599, 0.18106962419014,  
-    // -0.008945181135788245, 0.9999481006917174, 0.004876439015823288, -0.04546324090016857,
-    // 0.00384233617405678, -0.004842226763999368, 0.999980894463835, 0.08046453079998771,
-    // 0,0,0,1);
-    // Radar_to_Thermal = (cv::Mat_<double>(4,4) <<
-    // 0.999665,    0.00925436,  -0.0241851,  -0.0248342,
-    // -0.00826999, 0.999146,    0.0404891,   0.0958317,
-    // 0.0245392,   -0.0402755,  0.998887,    0.0268037,
-    // 0,  0,  0,  1);
-    // Change_Radarframe=(cv::Mat_<double>(4,4) <<
-    // 0,-1,0,0,
-    // 0,0,-1,0,
-    // 1,0,0,0,
-    // 0,0,0,1);
-    // Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
-    // std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
+    livox_to_RGB = (cv::Mat_<double>(4,4) << 
+    -0.006878330000, -0.999969000000, 0.003857230000, 0.029164500000,  
+    -7.737180000000E-05, -0.003856790000, -0.999993000000, 0.045695200000,
+     0.999976000000, -0.006878580000, -5.084110000000E-05, -0.19018000000,
+    0,  0,  0,  1);
+    RGB_to_livox =livox_to_RGB.inv();
+    Thermal_to_RGB = (cv::Mat_<double>(4,4) <<
+    0.9999526089706319, 0.008963747151337641, -0.003798822163962599, 0.18106962419014,  
+    -0.008945181135788245, 0.9999481006917174, 0.004876439015823288, -0.04546324090016857,
+    0.00384233617405678, -0.004842226763999368, 0.999980894463835, 0.08046453079998771,
+    0,0,0,1);
+    Radar_to_Thermal = (cv::Mat_<double>(4,4) <<
+    0.999665,    0.00925436,  -0.0241851,  -0.0248342,
+    -0.00826999, 0.999146,    0.0404891,   0.0958317,
+    0.0245392,   -0.0402755,  0.998887,    0.0268037,
+    0,  0,  0,  1);
+    Change_Radarframe=(cv::Mat_<double>(4,4) <<
+    0,-1,0,0,
+    0,0,-1,0,
+    1,0,0,0,
+    0,0,0,1);
+    Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
+    std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
 
     /************** 自己采集的数据 ***************/
     Radar_to_livox=(cv::Mat_<double>(4,4) <<
@@ -121,6 +121,10 @@ private:
     }
   
   void initializeParams() {
+
+    cloud_callback_count = 0;
+    imu_callback_count = 0;
+
     // 降采样方法、分辨率
     std::string downsample_method = private_nh.param<std::string>("downsample_method", "VOXELGRID");
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
@@ -233,7 +237,7 @@ private:
 
   // 处理Imu数据并发布，同时发布和Imu数据时间戳对应的Ground Truth数据(Odom消息)
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
-    std::cout << "-------- preprocessing_nodelet::imu_callback--------" << std::endl;
+    std::cout << "-------- preprocessing_nodelet imu_callback started, cout: " << ++imu_callback_count << "--------" <<std::endl;
     sensor_msgs::Imu imu_data;
     // imu_data的头部信息
     imu_data.header.stamp = imu_msg->header.stamp;
@@ -299,11 +303,16 @@ private:
       
       gt_pub.publish(odom_msgs.front());
     }
+
+
+    std::cout << "-------- preprocessing_nodelet imu_callback finished, cout: " << imu_callback_count << "--------" <<std::endl;
   }
 
   // 回调函数，处理sensor_msgs::PointCloud消息类型的数据
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
+    std::cout << "-------- preprocessing_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" <<std::endl;
+    
     // std::cout << "------------------------------cloud_callback--------------------------------" << std::endl;
     // std::cout << "channels[0].name: " << eagle_msg-> channels[0].name << std::endl;
     // std::cout << "channels[1].name: " << eagle_msg-> channels[1].name << std::endl;
@@ -492,6 +501,8 @@ private:
 
     points_pub.publish(*filtered);
     
+  
+    std::cout << "-------- preprocessing_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" <<std::endl;
   }
 
   // 点云的区域截取，输入点云中 z 坐标在 -2 和 10 之间的点截取出来，返回一个新的点云
@@ -697,6 +708,10 @@ private:
   }
 
 private:
+  // debug
+  int cloud_callback_count;
+  int imu_callback_count;
+
   ros::NodeHandle nh;
   ros::NodeHandle private_nh;
 
@@ -711,7 +726,6 @@ private:
 
   tf::TransformListener tf_listener;
   tf::TransformBroadcaster tf_broadcaster;
-
 
   bool use_distance_filter;
   double distance_near_thresh;

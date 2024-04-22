@@ -21,7 +21,7 @@
 <node pkg="rosbag" type="play" name="player"
     args = "-s 0.5 --clock --rate=3 --duration=10000
     $(arg path)$(arg file_4)
-    --topic /ars548_process/detection_point_cloud 
+    --topic /ars548_process/detection_point_cloud /livox/imu
     ">
 </node>
 

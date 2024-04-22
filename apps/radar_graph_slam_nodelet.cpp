@@ -93,6 +93,9 @@ public:
 
 // nodolet初始化时被调用，是nodelet生命周期回调函数
   virtual void onInit() {
+    cloud_callback_count = 0;
+    imu_callback_count = 0;
+
     nh = getNodeHandle();                                                           // 全局节点句柄
     mt_nh = getMTNodeHandle();                                                      // 多线程节点句柄
     private_nh = getPrivateNodeHandle();                                            // 私有节点句柄
@@ -205,6 +208,8 @@ private:
    */
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
 
+    std::cout << "-------- radar_graph_slam_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" <<std::endl;
+
     const ros::Time& stamp = cloud_msg->header.stamp;
     Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                    // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
     Eigen::Matrix4d matrix_map2base;                                         // matrix_map2base,4x4的双精度浮点数矩阵,可能用于表示地图到机器人基座(base)之间的变换关系
@@ -305,10 +310,15 @@ private:
     
 
     lastKeyframeTime = thisKeyframeTime;
+
+    std::cout << "-------- radar_graph_slam_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" <<std::endl;
   }
 
   // 根据IMU数据的四元数部分计算初始的机器人初始位姿矩阵`initial_pose`
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
+
+    std::cout << "-------- radar_graph_slam_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" <<std::endl;
+
     // Transform to Radar's Frame
     // 从imu数据中获取四元数，并进行坐标系变换,将IMU数据转换到雷达坐标
     geometry_msgs::QuaternionStamped::Ptr imu_quat(new geometry_msgs::QuaternionStamped);
@@ -343,6 +353,8 @@ private:
         initial_pose(3,0) << ", " << initial_pose(3,1) << ", " << initial_pose(3,2) << ", " << initial_pose(3,3) << ", " << std::endl << std::endl;
       cnt = 1;
     }
+    
+    std::cout << "-------- radar_graph_slam_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" <<std::endl;
   }
 
 
@@ -1286,6 +1298,10 @@ private:
 
 
 private:
+  
+  int cloud_callback_count;
+  int imu_callback_count;
+  
   // ROS
   ros::NodeHandle nh;
   ros::NodeHandle mt_nh;
