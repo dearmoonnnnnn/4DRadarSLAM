@@ -98,8 +98,8 @@
     <param name="max_submap_frames" value="5"/>
     <param name="enable_scan_to_map" value="false"/>
     <!-- IMU --> <!-- bad effect, not used -->
-    <param name="enable_imu_fusion" value="true" />
-    <param name="imu_debug_out" value="true" />
+    <param name="enable_imu_fusion" value="false" />
+    <param name="imu_debug_out" value="false" />
     <param name="imu_fusion_ratio" value="0.1" />
   </node>
 
@@ -196,8 +196,8 @@
   <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
-  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU.launch" />
-  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
+  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_nanyanglink.launch" /> -->

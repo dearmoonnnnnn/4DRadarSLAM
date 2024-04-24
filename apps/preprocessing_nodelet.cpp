@@ -112,11 +112,11 @@ private:
     std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
 
     /************** 自己采集的数据 ***************/
-    Radar_to_livox=(cv::Mat_<double>(4,4) <<
-    0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.1060016945940701,
-    0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
-    -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.154543126256660535,
-    0, 0, 0, 1);
+    // Radar_to_livox=(cv::Mat_<double>(4,4) <<
+    // 0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.1060016945940701,
+    // 0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
+    // -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.154543126256660535,
+    // 0, 0, 0, 1);
 
     }
   
@@ -237,7 +237,7 @@ private:
 
   // 处理Imu数据并发布，同时发布和Imu数据时间戳对应的Ground Truth数据(Odom消息)
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
-    std::cout << "-------- preprocessing_nodelet imu_callback started, cout: " << ++imu_callback_count << "--------" <<std::endl;
+    std::cout << "-------- preprocessing_nodelet imu_callback started, cout: " << ++imu_callback_count << "--------" << std::endl;
     sensor_msgs::Imu imu_data;
     // imu_data的头部信息
     imu_data.header.stamp = imu_msg->header.stamp;
@@ -305,13 +305,13 @@ private:
     }
 
 
-    std::cout << "-------- preprocessing_nodelet imu_callback finished, cout: " << imu_callback_count << "--------" <<std::endl;
+    std::cout << "-------- preprocessing_nodelet imu_callback finished, cout: " << imu_callback_count << "--------" << std::endl;
   }
 
   // 回调函数，处理sensor_msgs::PointCloud消息类型的数据
   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
-    std::cout << "-------- preprocessing_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" <<std::endl;
+    std::cout << "-------- preprocessing_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" << std::endl;
     
     // std::cout << "------------------------------cloud_callback--------------------------------" << std::endl;
     // std::cout << "channels[0].name: " << eagle_msg-> channels[0].name << std::endl;
@@ -330,57 +330,18 @@ private:
     // 遍历每一个点，i表示点
     for(int i = 0; i < eagle_msg->points.size(); i++)
     {
-        // // 官方数据
-        // // channels[0].value[i]表示点i的多普勒速度，channels[2].value[i]表示点i的信号强度
-        // // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
-        // if(eagle_msg->channels[2].values[i] > power_threshold) //"Power"
-        // {
-        //     // 检查点的坐标是否无效(NaN或无穷大)
-        //     if (eagle_msg->points[i].x == NAN || eagle_msg->points[i].y == NAN || eagle_msg->points[i].z == NAN) continue;
-        //     if (eagle_msg->points[i].x == INFINITY || eagle_msg->points[i].y == INFINITY || eagle_msg->points[i].z == INFINITY) continue;
-           
-        //     // 将点从雷达坐标系转换到Livox坐标系
-        //     cv::Mat ptMat, dstMat;
-        //     ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1);    
-        //     // Perform matrix multiplication and save as Mat_ for easy element access
-        //     dstMat= Radar_to_livox * ptMat;
-
-        //     // 对点进行赋值
-        //     radarpoint_raw.x = dstMat.at<double>(0,0);
-        //     radarpoint_raw.y = dstMat.at<double>(1,0);
-        //     radarpoint_raw.z = dstMat.at<double>(2,0);
-        //     radarpoint_raw.intensity = eagle_msg->channels[2].values[i];
-        //     radarpoint_raw.doppler = eagle_msg->channels[0].values[i];
-        //     radarpoint_xyzi.x = dstMat.at<double>(0,0);
-        //     radarpoint_xyzi.y = dstMat.at<double>(1,0);
-        //     radarpoint_xyzi.z = dstMat.at<double>(2,0);
-        //     radarpoint_xyzi.intensity = eagle_msg->channels[2].values[i];
-
-        //     // 将点添加到点云中
-        //     radarcloud_raw->points.push_back(radarpoint_raw);
-        //     radarcloud_xyzi->points.push_back(radarpoint_xyzi);
-        // }
-
-        // 处理自己采集的点云数据
-        // channels[0].value[i]表示点i的多普勒速度，channels[1].value[i]表示点i的信号强度
+        // 官方数据
+        // channels[0].value[i]表示点i的多普勒速度，channels[2].value[i]表示点i的信号强度
         // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
-        if(eagle_msg->channels[1].values[i] > power_threshold) //"Power"
+        if(eagle_msg->channels[2].values[i] > power_threshold) //"Power"
         {
             // 检查点的坐标是否无效(NaN或无穷大)
             if (eagle_msg->points[i].x == NAN || eagle_msg->points[i].y == NAN || eagle_msg->points[i].z == NAN) continue;
             if (eagle_msg->points[i].x == INFINITY || eagle_msg->points[i].y == INFINITY || eagle_msg->points[i].z == INFINITY) continue;
            
             // 将点从雷达坐标系转换到Livox坐标系
-            // ptMat:雷达坐标系的点
-            // dstMat:livox坐标系的点
             cv::Mat ptMat, dstMat;
-            // ptMat为四行一列的矩阵，值分别为点云的xyz坐标和一个额外的1，便于矩阵乘法运算
-            ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1); 
-            // std::cout << "points[i].x :" << eagle_msg->points[i].x << std::endl;
-            // std::cout << "points[i].y :" << eagle_msg->points[i].y << std::endl;
-            // std::cout << "points[i].z :" << eagle_msg->points[i].z << std::endl; 
-            // std::cout << "ptMAt :" << ptMat << std::endl;  
-
+            ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1);    
             // Perform matrix multiplication and save as Mat_ for easy element access
             dstMat= Radar_to_livox * ptMat;
 
@@ -388,17 +349,56 @@ private:
             radarpoint_raw.x = dstMat.at<double>(0,0);
             radarpoint_raw.y = dstMat.at<double>(1,0);
             radarpoint_raw.z = dstMat.at<double>(2,0);
-            radarpoint_raw.intensity = eagle_msg->channels[1].values[i];
+            radarpoint_raw.intensity = eagle_msg->channels[2].values[i];
             radarpoint_raw.doppler = eagle_msg->channels[0].values[i];
             radarpoint_xyzi.x = dstMat.at<double>(0,0);
             radarpoint_xyzi.y = dstMat.at<double>(1,0);
             radarpoint_xyzi.z = dstMat.at<double>(2,0);
-            radarpoint_xyzi.intensity = eagle_msg->channels[1].values[i];
+            radarpoint_xyzi.intensity = eagle_msg->channels[2].values[i];
 
             // 将点添加到点云中
             radarcloud_raw->points.push_back(radarpoint_raw);
             radarcloud_xyzi->points.push_back(radarpoint_xyzi);
         }
+
+        // // 处理自己采集的点云数据
+        // // channels[0].value[i]表示点i的多普勒速度，channels[1].value[i]表示点i的信号强度
+        // // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
+        // if(eagle_msg->channels[1].values[i] > power_threshold) //"Power"
+        // {
+        //     // 检查点的坐标是否无效(NaN或无穷大)
+        //     if (eagle_msg->points[i].x == NAN || eagle_msg->points[i].y == NAN || eagle_msg->points[i].z == NAN) continue;
+        //     if (eagle_msg->points[i].x == INFINITY || eagle_msg->points[i].y == INFINITY || eagle_msg->points[i].z == INFINITY) continue;
+           
+        //     // 将点从雷达坐标系转换到Livox坐标系
+        //     // ptMat:雷达坐标系的点
+        //     // dstMat:livox坐标系的点
+        //     cv::Mat ptMat, dstMat;
+        //     // ptMat为四行一列的矩阵，值分别为点云的xyz坐标和一个额外的1，便于矩阵乘法运算
+        //     ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1); 
+        //     // std::cout << "points[i].x :" << eagle_msg->points[i].x << std::endl;
+        //     // std::cout << "points[i].y :" << eagle_msg->points[i].y << std::endl;
+        //     // std::cout << "points[i].z :" << eagle_msg->points[i].z << std::endl; 
+        //     // std::cout << "ptMAt :" << ptMat << std::endl;  
+
+        //     // Perform matrix multiplication and save as Mat_ for easy element access
+        //     dstMat= Radar_to_livox * ptMat;
+
+        //     // 对点进行赋值
+        //     radarpoint_raw.x = dstMat.at<double>(0,0);
+        //     radarpoint_raw.y = dstMat.at<double>(1,0);
+        //     radarpoint_raw.z = dstMat.at<double>(2,0);
+        //     radarpoint_raw.intensity = eagle_msg->channels[1].values[i];
+        //     radarpoint_raw.doppler = eagle_msg->channels[0].values[i];
+        //     radarpoint_xyzi.x = dstMat.at<double>(0,0);
+        //     radarpoint_xyzi.y = dstMat.at<double>(1,0);
+        //     radarpoint_xyzi.z = dstMat.at<double>(2,0);
+        //     radarpoint_xyzi.intensity = eagle_msg->channels[1].values[i];
+
+        //     // 将点添加到点云中
+        //     radarcloud_raw->points.push_back(radarpoint_raw);
+        //     radarcloud_xyzi->points.push_back(radarpoint_xyzi);
+        // }
         
     }
 
@@ -502,7 +502,7 @@ private:
     points_pub.publish(*filtered);
     
   
-    std::cout << "-------- preprocessing_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" <<std::endl;
+    std::cout << "-------- preprocessing_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" << std::endl;
   }
 
   // 点云的区域截取，输入点云中 z 坐标在 -2 和 10 之间的点截取出来，返回一个新的点云
