@@ -75,7 +75,7 @@ bool RadarEgoVelocityEstimator::estimate(const sensor_msgs::PointCloud2& radar_s
     for (uint i = 0; i < radar_scan->size(); ++i)
     {
       const auto target = radar_scan->at(i);
-      const double r      = Vector3(target.x, target.y, target.z).norm();
+      const double r      = Vector3(target.x, target.y, target.z).norm(); // 目标点相对雷达源的距离
 
       Real azimuth   = std::atan2(target.y, target.x);
       Real elevation = std::atan2(std::sqrt(target.x * target.x + target.y * target.y), target.z)- M_PI_2;
