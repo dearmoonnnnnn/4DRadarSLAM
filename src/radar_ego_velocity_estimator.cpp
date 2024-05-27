@@ -100,7 +100,7 @@ bool RadarEgoVelocityEstimator::estimate(const sensor_msgs::PointCloud2& radar_s
       
       // 若多普勒速度字段为NAN，跳过该点
       if(std::isnan(target.doppler)){
-        ROS_INFO("NAN doppler detected");
+        // ROS_INFO("NAN doppler detected");
         continue;
       }
 
