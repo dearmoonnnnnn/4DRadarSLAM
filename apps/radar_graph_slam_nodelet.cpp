@@ -73,6 +73,7 @@
 #include "utility_radar.h"
 
 using namespace std;
+bool callback_debug = false;
 
 namespace radar_graph_slam {
 
@@ -208,7 +209,9 @@ private:
    */
   void cloud_callback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs::PointCloud2::ConstPtr& cloud_msg) {
 
-    std::cout << "-------- radar_graph_slam_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" << std::endl;
+    if(callback_debug){
+      std::cout << "-------- radar_graph_slam_nodelet cloud_callback started, cout：" << ++cloud_callback_count << "--------" << std::endl;
+    }
 
     const ros::Time& stamp = cloud_msg->header.stamp;
     Eigen::Isometry3d odom_now = odom2isometry(odom_msg);                    // 将ROS里程计消息（odom_msg）转换为Eigen库的Isometry3d类型
@@ -311,13 +314,17 @@ private:
 
     lastKeyframeTime = thisKeyframeTime;
 
-    std::cout << "-------- radar_graph_slam_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" << std::endl;
+    if(callback_debug){
+      std::cout << "-------- radar_graph_slam_nodelet cloud_callback finished, cout：" << cloud_callback_count << "--------" << std::endl;
+    }
   }
 
   // 根据IMU数据的四元数部分计算初始的机器人初始位姿矩阵`initial_pose`
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
 
-    std::cout << "-------- radar_graph_slam_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" << std::endl;
+    if(callback_debug){
+      std::cout << "-------- radar_graph_slam_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" << std::endl;
+    }
 
     // Transform to Radar's Frame
     // 从imu数据中获取四元数，并进行坐标系变换,将IMU数据转换到雷达坐标
@@ -354,7 +361,9 @@ private:
       cnt = 1;
     }
     
-    std::cout << "-------- radar_graph_slam_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" << std::endl;
+    if(callback_debug){
+      std::cout << "-------- radar_graph_slam_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" << std::endl;
+    }
   }
 
 

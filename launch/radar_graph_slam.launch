@@ -197,7 +197,8 @@
 
   <!--- Rosbag Play -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU.launch" /> -->
-  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" />
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_enhanced.launch" />
+  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_nanyanglink.launch" /> -->

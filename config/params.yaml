@@ -1,7 +1,7 @@
 radar_slam:
 
   # Topics
-  pointCloudTopic: "/radar_enhanced_pcl"             # Point cloud data <!-- pc2_raw inlier_pc2 segmented -->
+  pointCloudTopic: "/radar_merged"             # Point cloud data <!-- pc2_raw inlier_pc2 segmented -->
   # pointCloudTopic: "/ars548_process/detection_point_cloud"
 
   

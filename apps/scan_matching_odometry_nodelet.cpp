@@ -58,6 +58,8 @@
 
 using namespace std;
 
+bool callback_debug = false;
+
 namespace radar_graph_slam {
 
 class ScanMatchingOdometryNodelet : public nodelet::Nodelet, public ParamServer {
@@ -118,12 +120,12 @@ private:
 
     // The minimum tranlational distance and rotation angle between keyframes_.
     // If this value is zero, frames are always compared with the previous frame
-    // keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);                 // 关键帧之间的最小平移距离
-    // keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);                 // 关键帧之间的最小旋转角度
-    // keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);                    // 关键帧之间的最小时间间隔
-    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.15);                 // 关键帧之间的最小平移距离
-    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.05);                 // 关键帧之间的最小旋转角度
-    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 0.1);                    // 关键帧之间的最小时间间隔
+    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);                 // 关键帧之间的最小平移距离
+    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);                 // 关键帧之间的最小旋转角度
+    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);                    // 关键帧之间的最小时间间隔
+    // keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.15);                 // 关键帧之间的最小平移距离
+    // keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.05);                 // 关键帧之间的最小旋转角度
+    // keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 0.1);                    // 关键帧之间的最小时间间隔
 
 
 
@@ -176,9 +178,11 @@ private:
   }
 
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
-
-    std::cout << "-------- scan_matching_odometry_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" <<std::endl;
-
+    
+    if(callback_debug){
+      std::cout << "-------- scan_matching_odometry_nodelet imu_callback started, cout：" << ++imu_callback_count << "--------" <<std::endl;
+    }
+    
     Eigen::Quaterniond imu_quat_from(imu_msg->orientation.w, imu_msg->orientation.x, imu_msg->orientation.y, imu_msg->orientation.z);
     Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;            // 通过预定义的extQRPY对IMU方向进行去扰动，补偿安装时的偏差，使其与激光雷达坐标系对齐。
     imu_quat_deskew.normalize();                                             // 归一化去扰动后的四元数
@@ -216,8 +220,9 @@ private:
       cnt = 1;
     }
     
-     std::cout << "-------- scan_matching_odometry_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" <<std::endl;
-
+    if(callback_debug){
+      std::cout << "-------- scan_matching_odometry_nodelet imu_callback finished, cout：" << imu_callback_count << "--------" <<std::endl;
+    }
   }
 
 
@@ -373,8 +378,10 @@ private:
    */
   void pointcloud_callback(const geometry_msgs::TwistWithCovarianceStampedConstPtr& twistMsg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
     
-    std::cout << "-------- scan_matching_odometry_nodelet pointcallback started, cout：" << ++pointcallback_count << "--------" << std::endl;
-    
+    if(callback_debug){
+      std::cout << "-------- scan_matching_odometry_nodelet pointcallback started, cout：" << ++pointcallback_count << "--------" << std::endl;
+    }
+
     if(!ros::ok()) {
       return;
     }
@@ -384,11 +391,12 @@ private:
     double this_cloud_time = cloud_msg->header.stamp.toSec();
     static double last_cloud_time = this_cloud_time;
 
-    // 计算当前点云和上一帧点云之间的累积线速度
+    // 计算当前点云和上一帧点云之间的累积线速度，即位移
     double dt = this_cloud_time - last_cloud_time;                      // 连续点云之间的时间差 = 当前点云时间 - 之前的点云时间
     double egovel_cum_x = twistMsg->twist.twist.linear.x * dt;
     double egovel_cum_y = twistMsg->twist.twist.linear.y * dt;
     double egovel_cum_z = twistMsg->twist.twist.linear.z * dt;
+
     // If too large, set 0
     if (pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2) > pow(max_egovel_cum, 2));
     else egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
@@ -416,8 +424,9 @@ private:
     read_until->frame_id = "/filtered_points";
     read_until_pub.publish(read_until);
 
-
-    std::cout << "-------- scan_matching_odometry_nodelet point_callback finished, cout：" << pointcallback_count << "--------" << std::endl;
+    if(callback_debug){
+      std::cout << "-------- scan_matching_odometry_nodelet point_callback finished, cout：" << pointcallback_count << "--------" << std::endl;
+    }
   }
 
 
@@ -489,7 +498,7 @@ private:
     // **********  Matching  **********
     Eigen::Matrix4d guess;                                                  // 初始猜测变换矩阵
     if (use_ego_vel)                                                        // 使用车辆速度信息，则乘以累积的车辆速度变换
-      guess = prev_trans_s2s * egovel_cum * msf_delta.matrix();             // 则 guess = 上一次扫描到扫描的变换 * 累积的车辆速度变换 * 扫描匹配的相对位姿变换   
+      guess = prev_trans_s2s * egovel_cum * msf_delta.matrix();             // 则 guess = 上一次扫描到扫描的变换 * 累积的车辆速度变换(即位移) * 扫描匹配的相对位姿变换   
     else
       guess = prev_trans_s2s * msf_delta.matrix();
 
@@ -528,30 +537,40 @@ private:
     // Add abnormal judgment, that is, if the difference between the two frames matching point cloud 
     // transition matrix is too large, it will be discarded
     bool thresholded = false;                                                                     // 表示是否超过阈值
-    if(enable_transform_thresholding) {                                                           // 启用变换阈值判断
+    
+    // 启用变换阈值判断，并进行阈值检测和数据融合
+    if(enable_transform_thresholding) {                                                           
+
       Eigen::Matrix4d radar_delta;                                                                // 两帧之间变换矩阵的差异
+      // 根据是否启用scan_to_map，选择不同的变换矩阵进行计算
       if(enable_scan_to_map) radar_delta = prev_trans_s2m.inverse() * trans_s2m;
       else radar_delta = prev_trans_s2s.inverse() * trans_s2s;
+    
+      // 计算平移两和旋转量
       double dx_rd = radar_delta.block<3, 1>(0, 3).norm();                                        // 平移部分的欧几里得范数(即平移量的长度)
       // double da_rd = std::acos(Eigen::Quaterniond(radar_delta.block<3, 3>(0, 0)).w())*180/M_PI;
       Eigen::AngleAxisd rotation_vector;
       rotation_vector.fromRotationMatrix(radar_delta.block<3, 3>(0, 0));
       double da_rd = rotation_vector.angle();
       Eigen::Matrix3d rot_rd = radar_delta.block<3, 3>(0, 0).cast<double>();
+    
+      // 判断变换是否过大
       bool too_large_trans = dx_rd > max_acceptable_trans || da_rd > max_acceptable_angle;
       double da, dx, delta_rot_imu = 0;
       Eigen::Matrix3d matrix_rot; Eigen::Vector3d delta_trans_egovel;
 
-      if (enable_imu_thresholding) {
+      if (enable_imu_thresholding) {  // 启用 IMU 阈值判断
         // Use IMU orientation to determine whether the matching result is good or not
         sensor_msgs::Imu frame_imu;
         Eigen::Matrix3d rot_imu = Eigen::Matrix3d::Identity();
         auto result = get_closest_imu(stamp);
         if (result.first) {
           frame_imu = result.second;
+          // 计算当前帧和上一帧IMU的旋转差异
           Eigen::Quaterniond imu_quat(frame_imu.orientation.w, frame_imu.orientation.x, frame_imu.orientation.y, frame_imu.orientation.z);
           Eigen::Quaterniond prev_imu_quat(last_frame_imu.orientation.w, last_frame_imu.orientation.x, last_frame_imu.orientation.y, last_frame_imu.orientation.z);
           rot_imu = (prev_imu_quat.inverse() * imu_quat).toRotationMatrix();
+          // 计算欧拉角并应用到旋转矩阵
           Eigen::Vector3d eulerAngle_imu = rot_imu.eulerAngles(0,1,2); // roll pitch yaw
           Eigen::Vector3d eulerAngle_rd = last_radar_delta.block<3,3>(0,0).eulerAngles(0,1,2);
           Eigen::AngleAxisd rollAngle(Eigen::AngleAxisd(restrict_rad(eulerAngle_imu(0)),Eigen::Vector3d::UnitX()));
@@ -562,10 +581,13 @@ private:
           delta_rot_imu = fabs(std::acos(Eigen::Quaterniond(rot_imu).w()))*180/M_PI;
           last_frame_imu = frame_imu;
         }
+
+        // 计算平移差异
         delta_trans_egovel = egovel_cum.block<3,1>(0,3).cast<double>();
         Eigen::Vector3d delta_trans_radar = radar_delta.block<3,1>(0,3).cast<double>();
         dx = (delta_trans_egovel - delta_trans_radar).norm();
 
+        // 如果变换超过阈值，更新状态并融合数据
         if (dx > max_diff_trans || da > max_diff_angle || too_large_trans) {
           Eigen::Matrix4d mat_est(Eigen::Matrix4d::Identity());
           mat_est.block<3, 3>(0, 0) = matrix_rot;
@@ -581,7 +603,7 @@ private:
           else odom_s2s_now = keyframe_pose_s2s * prev_trans_s2s;
         }
       }
-      else {
+      else {  // 不启用IMU阈值判断
         if (too_large_trans) {
           cout << "Too large transform!!  " << dx_rd << "[m] " << da_rd << "[degree]"<<
             " Ignore this frame (" << stamp << ")" << endl;

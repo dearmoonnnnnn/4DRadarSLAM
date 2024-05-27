@@ -141,7 +141,7 @@ public:
         nh.param<std::string>("/robot_id", robot_id, "nuc_handcart");
 
         // nh.param<std::string>("radar_slam/pointCloudTopic", pointCloudTopic, "/ars548_process/detection_point_cloud");
-        nh.param<std::string>("radar_slam/pointCloudTopic", pointCloudTopic, "/radar_enhanced_pcl");
+        nh.param<std::string>("radar_slam/pointCloudTopic", pointCloudTopic, "/radar_merged");
         
         nh.param<std::string>("radar_slam/imuTopic", imuTopic, "/livox/imu");
         nh.param<std::string>("radar_slam/odomTopic", odomTopic, "/odom");

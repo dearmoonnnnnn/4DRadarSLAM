@@ -35,6 +35,8 @@
 
 #include <radar_ego_velocity_estimator.h>
 
+#include <cmath> // for NAN
+
 using namespace std;
 using namespace rio;
 
@@ -80,6 +82,28 @@ bool RadarEgoVelocityEstimator::estimate(const sensor_msgs::PointCloud2& radar_s
       Real azimuth   = std::atan2(target.y, target.x);
       Real elevation = std::atan2(std::sqrt(target.x * target.x + target.y * target.y), target.z)- M_PI_2;
 
+      // 调试输出
+      if(0){
+          std::cout << "/******* 距离信息调试输出 *******" << std::endl;
+          std::cout << "/------- r : " << r << "  ( " <<  config_.min_dist   << ", " << config_.max_dist << " )" << std::endl;
+          std::cout << std::endl;
+          
+          std::cout << "/******* 信号强度调试输出 ********" << std::endl;
+          std::cout << "/------- target.intensity : " << target.intensity <<  ", config_.min_db : " << config_.min_db <<std::endl;
+          std::cout << std::endl;
+
+          std::cout << "/******* 角度信息调试输出 *******" << std::endl;
+          std::cout << "/------- azimuth : " << std::fabs(azimuth) << ", config_.azimuth_thresh_deg : " << angles::from_degrees(config_.azimuth_thresh_deg) << std::endl;
+          std::cout << "/------- elevation : " << std::fabs(elevation) << ", config_.elevation_thresh_deg : " << angles::from_degrees(config_.elevation_thresh_deg) << std::endl;
+          std::cout << std::endl;
+      }
+      
+      // 若多普勒速度字段为NAN，跳过该点
+      if(std::isnan(target.doppler)){
+        ROS_INFO("NAN doppler detected");
+        continue;
+      }
+
       if (r > config_.min_dist && r < config_.max_dist && target.intensity > config_.min_db &&
           std::fabs(azimuth) < angles::from_degrees(config_.azimuth_thresh_deg) &&
           std::fabs(elevation) < angles::from_degrees(config_.elevation_thresh_deg))
@@ -105,6 +129,7 @@ bool RadarEgoVelocityEstimator::estimate(const sensor_msgs::PointCloud2& radar_s
       std::nth_element(v_dopplers.begin(), v_dopplers.begin() + n, v_dopplers.end());
       const auto median = v_dopplers[n];
       
+      // 如果计算出的中位数速度小于0.1m/s，则认为ego速度为0
       if (median < config_.thresh_zero_velocity)
       {
         // ROS_INFO_STREAM_THROTTLE(0.5, kPrefix << "Zero velocity detected!");
