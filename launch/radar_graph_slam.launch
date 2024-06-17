@@ -38,7 +38,7 @@
   <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
   <!-- radar_preprocessing_nodelet -->
-  <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="load radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)">
+  <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="load radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)" >
     <!-- distance filter -->
     <param name="use_distance_filter" value="true" />
     <param name="distance_near_thresh" value="2" />
@@ -196,8 +196,8 @@
   <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
-  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU.launch" /> -->
-  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_enhanced.launch" />
+  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoDiSu3.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiXueBuDianBoGaoSu.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->

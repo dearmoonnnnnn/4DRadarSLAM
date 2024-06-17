@@ -858,6 +858,7 @@ private:
       std::sort(egovel_time.begin(), egovel_time.end());                    // 对存储着时间的容器进行排序
       double median = egovel_time.at(size_t(egovel_time.size() / 2));       // 计算排序后的中值
       cout << "Ego velocity time cost (median): " << median << endl;
+      cout << "1111111111111111111" << std::endl;
     }
     else if (str_msg.data == "point_distribution") {                        // 如果收到的命令是point_distribution           
       Eigen::VectorXi data(100);
@@ -873,6 +874,7 @@ private:
       }
       cout << endl;
     }
+
   }
 
 private:
