@@ -815,8 +815,8 @@ private:
       const auto& pt = cloud->at(i);
 
       // TODO: transform IMU data into the LIDAR frame
-      double delta_t = scan_period * static_cast<double>(i) / cloud->size();          // 计算每个点在扫描周期内的时间偏移
-      Eigen::Quaternionf delta_q(1, delta_t / 2.0 * ang_v[0], delta_t / 2.0 * ang_v[1], delta_t / 2.0 * ang_v[2]);  // 在delta_t内发生的旋转
+      double delta_t = scan_period * static_cast<double>(i) / cloud->size();          // 点 i 在扫描周期 scan_period 内的时间偏移
+      Eigen::Quaternionf delta_q(1, delta_t / 2.0 * ang_v[0], delta_t / 2.0 * ang_v[1], delta_t / 2.0 * ang_v[2]);  // 在 delta_t 内发生的旋转
       Eigen::Vector3f pt_ = delta_q.inverse() * pt.getVector3fMap();                  // 将点的三维坐标乘以四元数的逆来应用去畸变变换，并转换成 Vector3f 类型
 
       // 将去畸变后的点添加到新的点云中
