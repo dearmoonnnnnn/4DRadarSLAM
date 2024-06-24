@@ -318,8 +318,8 @@ private:
     }
   }
 
-  // 回调函数，处理sensor_msgs::PointCloud消息类型的数据
-  // 将sensor::PointCloud类型的数据转换为pcl::PointCloud<PointT>类型的数据,然后转换为sensor::PointCloud2类型的数据
+//   // 回调函数，处理sensor_msgs::PointCloud消息类型的数据
+//   // 将sensor::PointCloud类型的数据转换为pcl::PointCloud<PointT>类型的数据,然后转换为sensor::PointCloud2类型的数据
 //   void cloud_callback(const sensor_msgs::PointCloud::ConstPtr&  eagle_msg) { // const pcl::PointCloud<PointT>& src_cloud_r
 
 //     if(callback_debug){
