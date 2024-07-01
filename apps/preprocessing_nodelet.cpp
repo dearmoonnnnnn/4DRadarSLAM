@@ -525,9 +525,9 @@ private:
    */
   void cloud_callback(const sensor_msgs::PointCloud2::ConstPtr&  eagle_msg) { 
     
-    // 定义两种不同的点云类型和它们的指针
-    RadarPointCloudType radarpoint_raw;            // 原始点云，带有x、y、z、强度和多普勒速度信息
-    PointT radarpoint_xyzi;                        // 原始点云，带有x、y、z、强度信息
+    // 定义两种不同的点类型和它们的点云
+    RadarPointCloudType radarpoint_raw;            // 点，带有x、y、z、强度和多普勒速度信息
+    PointT radarpoint_xyzi;                        // 点，带有x、y、z、强度信息
     pcl::PointCloud<RadarPointCloudType>::Ptr radarcloud_raw( new pcl::PointCloud<RadarPointCloudType> );
     pcl::PointCloud<PointT>::Ptr radarcloud_xyzi( new pcl::PointCloud<PointT> );
 
