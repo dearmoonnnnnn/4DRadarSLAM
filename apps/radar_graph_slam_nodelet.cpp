@@ -682,22 +682,23 @@ private:
    * @param event
    */
   void optimization_timer_callback(const ros::WallTimerEvent& event) {
-    std::lock_guard<std::mutex> lock(main_thread_mutex);
+    std::lock_guard<std::mutex> lock(main_thread_mutex);                // 互斥锁，确保主线程安全操作
 
     // add keyframes_ and floor coeffs in the queues to the pose graph
+    // 将队列中的关键帧和下限系数添加到位姿图中
     bool keyframe_updated = flush_keyframe_queue();
 
     if(!keyframe_updated) {
       std_msgs::Header read_until;
-      read_until.stamp = ros::Time::now() + ros::Duration(30, 0);
+      read_until.stamp = ros::Time::now() + ros::Duration(30, 0);       // 设置读取的时间戳为当前时间加30秒
       read_until.frame_id = points_topic;
-      read_until_pub.publish(read_until);
+      read_until_pub.publish(read_until);                               // 发布read_until消息
       read_until.frame_id = "/filtered_points";
-      read_until_pub.publish(read_until);
+      read_until_pub.publish(read_until);                               // 再次发布read_until消息，但帧id不同
     }
 
     if(!keyframe_updated & !flush_gps_queue() & !flush_barometer_queue()) {
-      return;
+      return;                                                           // 如果关键帧没有更新，且GPS和气压队列也没有更新，则直接返回
     }
     
     // loop detection
@@ -767,16 +768,23 @@ private:
     }
   }
 
+// 添加回环因子，将检测到的回环添加到位姿图中
   void addLoopFactor()
   {
     if (loop_detector->loopIndexQueue.empty())
       return;
+
+
+    // 遍历 loopIndexQueue 的每一个回环索引
     for (int i = 0; i < (int)loop_detector->loopIndexQueue.size(); ++i){
-      int indexFrom = loop_detector->loopIndexQueue[i].first;
-      int indexTo = loop_detector->loopIndexQueue[i].second;
-      Eigen::Isometry3d poseBetween = loop_detector->loopPoseQueue[i];
-      Eigen::MatrixXd information_matrix = loop_detector->loopInfoQueue[i];
+      int indexFrom = loop_detector->loopIndexQueue[i].first;               // 获取回环起点的索引
+      int indexTo = loop_detector->loopIndexQueue[i].second;                // 获取回环终点的索引
+      Eigen::Isometry3d poseBetween = loop_detector->loopPoseQueue[i];      // 起点到重点的位姿变换
+      Eigen::MatrixXd information_matrix = loop_detector->loopInfoQueue[i]; // 获取回环信息矩阵
+
+      // 向位姿图中添加回环边
       auto edge = graph_slam->add_se3_edge(keyframes[indexFrom]->node, keyframes[indexTo]->node, poseBetween, information_matrix);
+      // 为回环边添加鲁棒核函数
       graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("loop_closure_edge_robust_kernel", "NONE"), private_nh.param<double>("loop_closure_edge_robust_kernel_size", 1.0));
     }
     // loopIndexQueue.clear();
