@@ -17,7 +17,7 @@
 <!-- /livox/imu-->
 <node pkg="rosbag" type="play" name="player"
     args = "-s 0.5 --clock --rate=3 --duration=10000
-    $(arg path)$(arg file_0)
+    $(arg path)$(arg file_1)
     --topic /radar_merged /livox/imu
     ">
 </node>

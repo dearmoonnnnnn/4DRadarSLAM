@@ -103,8 +103,10 @@ double SCManager::distDirectSC ( MatrixXd &_sc1, MatrixXd &_sc2 )
 
 int SCManager::fastAlignUsingVkey( MatrixXd & _vkey1, MatrixXd & _vkey2)
 {
-    int argmin_vkey_shift = 0;
-    double min_veky_diff_norm = 10000000;
+    int argmin_vkey_shift = 0;                      // 两个键之间的最佳变换的索引
+    double min_veky_diff_norm = 10000000;           // 最小 _veky1 和变换之后的 _vkey2 的最小距离
+
+    // 遍历所有可能的变换索引，找到最佳变换索引
     for ( int shift_idx = 0; shift_idx < _vkey1.cols(); shift_idx++ )
     {
         MatrixXd vkey2_shifted = circshift(_vkey2, shift_idx);

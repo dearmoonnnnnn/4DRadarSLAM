@@ -85,14 +85,21 @@ class SCManager
 public: 
     SCManager( ) = default; // reserving data space (of std::vector) could be considered. but the descriptor is lightweight so don't care.
 
-    void setScDistThresh(double thresh);
-    void setAzimuthRange(double range);
+    void setScDistThresh(double thresh);    // 设置扫描上下文的距离阈值
+    void setAzimuthRange(double range);     // 设置扫描上下文的 azimuth 角度 
 
-    Eigen::MatrixXd makeScancontext( pcl::PointCloud<SCPointType> & _scan_down );
-    Eigen::MatrixXd makeRingkeyFromScancontext( Eigen::MatrixXd &_desc );
-    Eigen::MatrixXd makeSectorkeyFromScancontext( Eigen::MatrixXd &_desc );
+    Eigen::MatrixXd makeScancontext( pcl::PointCloud<SCPointType> & _scan_down );       // 从下采样的点云生成扫描上下文
+    Eigen::MatrixXd makeRingkeyFromScancontext( Eigen::MatrixXd &_desc );               // 从扫描上下文生成环键
+    Eigen::MatrixXd makeSectorkeyFromScancontext( Eigen::MatrixXd &_desc );             // 从扫描上下文生成扇形键
 
+    /* Perform fast alignment using vertical keys */
+    /* @param _vkey1, _vkey2: two sets of vertical keys */
+    /* @return: the alignment result */
     int fastAlignUsingVkey ( MatrixXd & _vkey1, MatrixXd & _vkey2 ); 
+    
+    /* Calculate the direct distance between two scan context descriptors */
+    /* @param _sc1, _sc2: two scan context descriptors */
+    /* @return: the calculated distance */
     double distDirectSC ( MatrixXd &_sc1, MatrixXd &_sc2 ); // "d" (eq 5) in the original paper (IROS 18)
     std::pair<double, int> distanceBtnScanContext ( MatrixXd &_sc1, MatrixXd &_sc2 ); // "D" (eq 6) in the original paper (IROS 18)
 
