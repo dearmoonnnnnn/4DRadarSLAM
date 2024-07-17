@@ -30,15 +30,19 @@ public:
   using PointT = pcl::PointXYZI;
   using Ptr = std::shared_ptr<KeyFrame>;
 
+  // 通过索引、时间戳、位姿、累计距离、点云构建 KeyFrame
   KeyFrame(const size_t index, const ros::Time& stamp, const Eigen::Isometry3d& odom_scan2scan, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud);
+  // 从目录中加载关键帧，并将其添加到图优化中
   KeyFrame(const std::string& directory, g2o::HyperGraph* graph);
   virtual ~KeyFrame();
 
+  // 将关键帧数据保存到指定目录中
   void save(const std::string& directory);
+  // 从指定目录中加载关键帧数据，并将其添加到位姿图中
   bool load(const std::string& directory, g2o::HyperGraph* graph);
 
-  long id() const;
-  Eigen::Isometry3d estimate() const;
+  long id() const;                      // 返回关键帧的唯一标识符
+  Eigen::Isometry3d estimate() const;   // 返回当前关键帧的位姿
 
 public:
   size_t index;

@@ -685,7 +685,7 @@ private:
     std::lock_guard<std::mutex> lock(main_thread_mutex);                // 互斥锁，确保主线程安全操作
 
     // add keyframes_ and floor coeffs in the queues to the pose graph
-    // 将队列中的关键帧和下限系数添加到位姿图中
+    // 将队列中的关键帧和地面系数添加到位姿图中
     bool keyframe_updated = flush_keyframe_queue();
 
     if(!keyframe_updated) {
