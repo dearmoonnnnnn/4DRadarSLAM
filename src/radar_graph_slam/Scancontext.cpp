@@ -163,9 +163,9 @@ std::pair<double, int> SCManager::distanceBtnScanContext( MatrixXd &_sc1, Matrix
 
 MatrixXd SCManager::makeScancontext( pcl::PointCloud<SCPointType> & _scan_down )
 {
-    TicToc t_making_desc;
+    TicToc t_making_desc;       // 计时器，用于测量创建扫描上下文的时间
 
-    int num_pts_scan_down = _scan_down.points.size();
+    int num_pts_scan_down = _scan_down.points.size();           // 点云中的点数
 
     // main
     const int NO_POINT = -1000;
@@ -174,7 +174,7 @@ MatrixXd SCManager::makeScancontext( pcl::PointCloud<SCPointType> & _scan_down )
     SCPointType pt;
     float azim_angle, azim_range; // wihtin 2d plane
     int ring_idx, sctor_idx;
-    for (int pt_idx = 0; pt_idx < num_pts_scan_down; pt_idx++)
+    for (int pt_idx = 0; pt_idx < num_pts_scan_down; pt_idx++)      // 遍历每个点
     {
         pt.x = _scan_down.points[pt_idx].x; 
         pt.y = _scan_down.points[pt_idx].y;
@@ -192,6 +192,7 @@ MatrixXd SCManager::makeScancontext( pcl::PointCloud<SCPointType> & _scan_down )
         if( azim_range > PC_MAX_RADIUS )
             continue;
 
+        // 计算点在环上的索引 ring_idx 和点在扇形上的索引 sctor_idx
         ring_idx = std::max( std::min( PC_NUM_RING, int(ceil( (azim_range / PC_MAX_RADIUS) * PC_NUM_RING )) ), 1 );
         // sctor_idx = std::max( std::min( PC_NUM_SECTOR, int(ceil( (azim_angle / 360.0) * PC_NUM_SECTOR )) ), 1 );
         sctor_idx = std::max( std::min( PC_NUM_SECTOR, int(ceil( ((azim_angle - PC_AZIMUTH_ANGLE_MIN) / (PC_AZIMUTH_ANGLE_MAX - PC_AZIMUTH_ANGLE_MIN)) * PC_NUM_SECTOR )) ), 1 );

@@ -13,7 +13,7 @@
 <arg name = "file_1" default = "radar_lidar_output_5.bag"/>
 
 <!-- Plays the dataset. WARNING: changing 'rate' will cause interactions with the demo.  -->
-<!--  /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
+<!-- /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
 <!-- /livox/imu-->
 <node pkg="rosbag" type="play" name="player"
     args = "-s 0.5 --clock --rate=3 --duration=10000
