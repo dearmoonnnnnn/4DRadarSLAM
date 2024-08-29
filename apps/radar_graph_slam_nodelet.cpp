@@ -1270,7 +1270,7 @@ private:
   void command_callback(const std_msgs::String& str_msg) {
     if (str_msg.data == "output_aftmapped") {
       ofstream fout;
-      fout.open("/home/dearmoon/datasets/NWU/日晴不颠簸低速3/estimated/5/stamped_pose_graph_estimate.txt", ios::out);
+      fout.open("/home/dearmoon/datasets/NWU/日雪不颠簸高速/estimated/5/stamped_pose_graph_estimate_3.txt", ios::out);
       fout << "# timestamp tx ty tz qx qy qz qw" << endl;
       fout.setf(ios::fixed, ios::floatfield);  // fixed mode，float
       fout.precision(8);  // Set precision 8

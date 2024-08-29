@@ -14,7 +14,7 @@
   <arg name="enable_frontend_ego_vel" default="false" />
   <arg name="enable_preintegration" default="false" /> <!-- not used -->
 
-  <arg name="keyframe_delta_trans_front_end" default="0.5" />
+  <arg name="keyframe_delta_trans_front_end" default="2" /> <!-- 原始为 0.5 -->
   <arg name="keyframe_delta_trans_back_end" default="2" /><!-- 1 2 -->
   <arg name="keyframe_delta_angle" default="0.2612" /><!-- 10°: 0.1745 15°: 0.2612 -->
 
@@ -75,8 +75,8 @@
     <param name="enable_imu_thresholding" value="false" /> <!-- bad effect, not used -->
     <param name="max_acceptable_trans" value="1.0" />
     <param name="max_acceptable_angle" value="3" /><!-- degree -->
-    <param name="max_diff_trans" value="0.3" />
-    <param name="max_diff_angle" value="0.8" />
+    <param name="max_diff_trans" value="2" />   <!-- 0.3 -->
+    <param name="max_diff_angle" value="1.5" />   <!-- 0.8 -->
     <param name="max_egovel_cum" value="1" /><!-- 12m/s -->
     <param name="downsample_method" value="NONE" />
     <param name="downsample_resolution" value="0.1" />
