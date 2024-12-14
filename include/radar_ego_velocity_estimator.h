@@ -31,7 +31,7 @@ struct RadarEgoVelocityEstimatorConfig
 {
  float min_dist = 1;
  float max_dist = 400;
- float min_db = 10;
+ float min_db = -1;
  float elevation_thresh_deg = 22.5;
  float azimuth_thresh_deg = 56.5;
  float doppler_velocity_correction_factor = 1;

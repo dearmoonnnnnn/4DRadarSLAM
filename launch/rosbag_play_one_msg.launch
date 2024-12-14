@@ -2,12 +2,15 @@
 
 <!-- This launch file loads rosbags and makes an octomap file -->
 
+<!-- 只有一帧消息，使用 launch 文件播放，无法订阅到消息 -->
+<!-- 正确做法：启动 4D RadarSlam 后，使用命令行播放 -->
+
 <launch>
 
 <!-- <param name="/use_sim_time" value="true"/> -->
 
 <!-- paths to the rosbag files -->
-<arg name="path" default="/home/dearmoon/datasets/NWU/日晴不颠簸低速3/enhancing/"/>
+<arg name="path" default="/home/dearmoon/datasets/one_msg/"/>
 
 <arg name = "file_0" default = "radar_lidar_output_0.bag"/>
 <arg name = "file_1" default = "radar_lidar_output_5.bag"/>
@@ -16,8 +19,8 @@
 <!-- /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
 <!-- /livox/imu-->
 <node pkg="rosbag" type="play" name="player"
-    args = "-s 0.5 --clock --rate=3 --duration=10000
-    $(arg path)$(arg file_1)
+    args = "
+    $(arg path)$(arg file_0)
     --topic /radar_merged /livox/imu
     ">
 </node>

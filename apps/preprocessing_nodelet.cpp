@@ -523,7 +523,7 @@ private:
    * 订阅雷达点云，消息格式为sensor_msgs::PointCloud2
    * 每个点包含五维信息，xyz坐标、信号强度、多普勒速度
    */
-  void cloud_callback(const sensor_msgs::PointCloud2::ConstPtr&  eagle_msg) { 
+  void cloud_callback(const sensor_msgs::PointCloud2::ConstPtr& eagle_msg) {
     
     // 定义两种不同的点类型和它们的点云
     RadarPointCloudType radarpoint_raw;            // 点，带有x、y、z、强度和多普勒速度信息
@@ -568,13 +568,12 @@ private:
             // 将点添加到点云中
             radarcloud_raw->points.push_back(radarpoint_raw);
             radarcloud_xyzi->points.push_back(radarpoint_xyzi);
-        }
-        
+        }   
     }
 
     //********** Publish PointCloud2 Format Raw Cloud **********
-    sensor_msgs::PointCloud2 pc2_raw_msg;                       // 定义PointCloud2消息对象
-    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);                // 将pcl的点云数据(radarcloud_raw)转换为ROS中的PointCloud2格式(pc2_raw_msg)
+    sensor_msgs::PointCloud2 pc2_raw_msg;                       // 定义 PointCloud2 消息对象
+    pcl::toROSMsg(*radarcloud_raw, pc2_raw_msg);                // 将 pcl 的点云数据(radarcloud_raw)转换为ROS中的PointCloud2格式(pc2_raw_msg)
     pc2_raw_msg.header.stamp = eagle_msg->header.stamp;         // 时间戳
     pc2_raw_msg.header.frame_id = baselinkFrame;                // 消息所在坐标系
     pc2_raw_pub.publish(pc2_raw_msg);                           // 发布消息到指定的话题/eagle_data/pc2_raw中
@@ -583,7 +582,7 @@ private:
     Eigen::Vector3d v_r, sigma_v_r;                               // 雷达的自我线速度和线速度的不确定性
     sensor_msgs::PointCloud2 inlier_radar_msg, outlier_radar_msg; // 内点点云数据(运动信息)和外点点云数据(噪声或运动干扰) 
     clock_t start_ms = clock();                                   // 记录开始估计自我运动的时刻
-    // 调用estimate函数进行自我运动估计，如果估计成功，返回true，并将并将估计得到的线速度和不确定性保存在 v_r 和 sigma_v_r 中
+    // 调用 estimate 函数进行自我运动估计，如果估计成功，返回 true，并将并将估计得到的线速度和不确定性保存在 v_r 和 sigma_v_r 中
     // 同时将内点和外点的点云数据保存在 inlier_radar_msg 和 outlier_radar_msg 中
     if (estimator.estimate(pc2_raw_msg, v_r, sigma_v_r, inlier_radar_msg, outlier_radar_msg))
     {
@@ -605,7 +604,6 @@ private:
         pub_twist.publish(twist);
         pub_inlier_pc2.publish(inlier_radar_msg);
         pub_outlier_pc2.publish(outlier_radar_msg);
-
     }
     else{;}
 

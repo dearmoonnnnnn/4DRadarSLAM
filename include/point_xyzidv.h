@@ -4,7 +4,10 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-// 定义自定义点类型
+/*
+ * 自定义点类型
+ * 源代码无此文件，但在 radar_point_cloud.h 中定义了相同类型的点
+ */
 namespace pcl
 {
   struct PointXYZIDV
