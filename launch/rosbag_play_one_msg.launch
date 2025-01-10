@@ -19,7 +19,7 @@
 <!-- /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
 <!-- /livox/imu-->
 <node pkg="rosbag" type="play" name="player"
-    args = "
+    args = "--clock
     $(arg path)$(arg file_0)
     --topic /radar_merged /livox/imu
     ">

@@ -83,7 +83,7 @@ bool RadarEgoVelocityEstimator::estimate(const sensor_msgs::PointCloud2& radar_s
       Real elevation = std::atan2(std::sqrt(target.x * target.x + target.y * target.y), target.z)- M_PI_2;
 
       // 调试输出
-      if(1){
+      if(0){
           std::cout << "/******* radar_ego_velocity_estimator 调试输出 : one point started *******" << std::endl;
           std::cout << "/------- 距离信息 r : " << r << "  ( " <<  config_.min_dist   << ", " << config_.max_dist << " )" << std::endl;
         

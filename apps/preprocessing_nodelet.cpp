@@ -113,15 +113,15 @@ private:
     0,0,-1,0,
     1,0,0,0,
     0,0,0,1);
-    Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
+    // Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
     std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
 
     /************** 自己采集的数据 ***************/
-    // Radar_to_livox=(cv::Mat_<double>(4,4) <<
-    // 0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.1060016945940701,
-    // 0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
-    // -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.154543126256660535,
-    // 0, 0, 0, 1);
+    Radar_to_livox=(cv::Mat_<double>(4,4) <<
+    0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.1060016945940701,
+    0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
+    -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.154543126256660535,
+    0, 0, 0, 1);
 
     }
   
@@ -648,7 +648,7 @@ private:
 
     // 对点云依次进行距离过滤、下采样、离群点去除
     pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);     
-    // filtered = passthrough(filtered);
+    filtered = passthrough(filtered);
     filtered = downsample(filtered);                
     // filtered = outlier_removal(filtered);
 
@@ -676,7 +676,7 @@ private:
     pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>());
     PointT pt;
     for(int i = 0; i < cloud->size(); i++){
-      if (cloud->at(i).z < 10 && cloud->at(i).z > -2){
+      if (cloud->at(i).z < 20 && cloud->at(i).z > -10){
         pt.x = (*cloud)[i].x;
         pt.y = (*cloud)[i].y;
         pt.z = (*cloud)[i].z;
@@ -756,7 +756,7 @@ private:
 
   pcl::PointCloud<PointT>::ConstPtr deskewing(const pcl::PointCloud<PointT>::ConstPtr& cloud) {
     ros::Time stamp = pcl_conversions::fromPCL(cloud->header.stamp);
-    if(imu_queue.empty()) {           // 如果IMU队列为空，直接返回原始点云(无法进行去畸变)
+    if(imu_queue.empty()) {           // 如果 IMU 队列为空，直接返回原始点云(无法进行去畸变)
       return cloud;
     }
 
@@ -779,10 +779,10 @@ private:
       colored_pub.publish(*colored);
     }
 
-    // 从IMU队列中获取最早的IMU数据，用于去畸变
+    // 从 IMU 队列中获取最早的IMU数据，用于去畸变
     sensor_msgs::ImuConstPtr imu_msg = imu_queue.front();
 
-    // 寻找IMU队列中最早的时间戳，以与当前点云对齐
+    // 寻找 IMU 队列中最早的时间戳，以与当前点云对齐
     auto loc = imu_queue.begin();
     for(; loc != imu_queue.end(); loc++) {
       imu_msg = (*loc);
@@ -791,14 +791,14 @@ private:
       }
     }
 
-    // 从IMU队列中移除已使用的IMU数据
+    // 从 IMU 队列中移除已使用的IMU数据
     imu_queue.erase(imu_queue.begin(), loc);
 
-    // 获取IMU的角度速度，并反转
+    // 获取 IMU 的角度速度，并反转
     Eigen::Vector3f ang_v(imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z);
     ang_v *= -1;
 
-    // deskewed存储去畸变后的点云
+    // deskewed 存储去畸变后的点云
     pcl::PointCloud<PointT>::Ptr deskewed(new pcl::PointCloud<PointT>());
     deskewed->header = cloud->header;
     deskewed->is_dense = cloud->is_dense;
@@ -856,7 +856,6 @@ private:
       std::sort(egovel_time.begin(), egovel_time.end());                    // 对存储着时间的容器进行排序
       double median = egovel_time.at(size_t(egovel_time.size() / 2));       // 计算排序后的中值
       cout << "Ego velocity time cost (median): " << median << endl;
-      cout << "1111111111111111111" << std::endl;
     }
     else if (str_msg.data == "point_distribution") {                        // 如果收到的命令是point_distribution           
       Eigen::VectorXi data(100);
