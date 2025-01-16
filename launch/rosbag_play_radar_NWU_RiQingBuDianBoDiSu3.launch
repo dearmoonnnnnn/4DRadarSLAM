@@ -15,9 +15,9 @@
 <!-- Plays the dataset. WARNING: changing 'rate' will cause interactions with the demo.  -->
 <!-- /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
 <!-- /livox/imu-->
-<node pkg="rosbag" type="play" name="player-4DRadarSLAM-RQBDBDS"
-    args = "-s 0.5 --clock --rate=3 --duration=10000
-    $(arg path)$(arg file_1)
+<node pkg="rosbag" type="play" name="player_radar_graph_slam"
+    args = "--clock --rate=3 --duration=10000
+    $(arg path)$(arg file_0)
     --topic /radar_merged /livox/imu
     ">
 </node>

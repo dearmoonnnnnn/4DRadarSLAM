@@ -41,19 +41,19 @@
   <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="load radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)" >
     <!-- distance filter -->
     <param name="use_distance_filter" value="true" />
-    <param name="distance_near_thresh" value="2" />
-    <param name="distance_far_thresh" value="100.0" />
+    <param name="distance_near_thresh" value="50" />
+    <param name="distance_far_thresh" value="300.0" />
     <param name="z_low_thresh" value="-100.0" />
     <param name="z_high_thresh" value="100.0" />
     <!-- NONE, VOXELGRID(0.1), or APPROX_VOXELGRID -->
     <param name="downsample_method" value="VOXELGRID" />
     <param name="downsample_resolution" value="0.1" />
     <!-- NONE, RADIUS 2(initial 0.5 2), STATISTICAL, or BILATERAL -->
-    <param name="outlier_removal_method" value="RADIUS" />
-    <param name="statistical_mean_k" value="30" />
-    <param name="statistical_stddev" value="1.2" />
-    <param name="radius_radius" value="0.5" />
-    <param name="radius_min_neighbors" value="1" />
+    <param name="outlier_removal_method" value="RADIUS" />  <!-- 方法 -->
+    <param name="statistical_mean_k" value="30" />          <!-- statistical 参数，计算均值时考虑的邻居点数量 -->
+    <param name="statistical_stddev" value="1.2" />         <!-- statistical 参数，标准差的阈值 -->
+    <param name="radius_radius" value="10" />                <!-- radius 参数，搜索邻居点的半径范围 -->
+    <param name="radius_min_neighbors" value="4" />         <!-- 最小邻居点数量，小于该值则为离群点 -->
     <param name="bilateral_sigma_s" value="5" />
     <param name="bilateral_sigma_r" value="0.03" />
     <!-- Power Filterring -->
@@ -196,10 +196,10 @@
   <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
-  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoDiSu3.launch" />
+  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoDiSu3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_one_msg.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoGaoSu4.launch" /> -->
-  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiXueBuDianBoGaoSu.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiXueBuDianBoGaoSu.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->

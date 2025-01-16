@@ -192,11 +192,11 @@ private:
 
     // 距离过滤相关参数
     use_distance_filter = private_nh.param<bool>("use_distance_filter", true);    // 表示是否使用距离过滤
-    distance_near_thresh = private_nh.param<double>("distance_near_thresh", 1.0); // 距离过滤的近的阈值
+    distance_near_thresh = private_nh.param<double>("distance_near_thresh", 2.0); // 距离过滤的近的阈值
     distance_far_thresh = private_nh.param<double>("distance_far_thresh", 100.0); // 距离过滤的远的阈值
     // 点云在z轴上的高度范围
-    z_low_thresh = private_nh.param<double>("z_low_thresh", -5.0);                
-    z_high_thresh = private_nh.param<double>("z_high_thresh", 20.0);
+    z_low_thresh = private_nh.param<double>("z_low_thresh", -10.0);                
+    z_high_thresh = private_nh.param<double>("z_high_thresh", 40.0);
 
     // 从参数服务器获取ground truth文件路径和是否进行tf发布的参数
     std::string file_name = private_nh.param<std::string>("gt_file_location", "");
@@ -648,9 +648,9 @@ private:
 
     // 对点云依次进行距离过滤、下采样、离群点去除
     pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);     
-    filtered = passthrough(filtered);
+    // filtered = passthrough(filtered);     // 根据高度进行区域截取，distance_filter 函数已包含高度过滤
     filtered = downsample(filtered);                
-    // filtered = outlier_removal(filtered);
+    filtered = outlier_removal(filtered);
 
     // 此处输出为0，由于点云数量稀疏，所有的点都被当成离群点
     // ROS_INFO("After outlier_removal, Received point cloud message with %lu points", filtered->points.size());
