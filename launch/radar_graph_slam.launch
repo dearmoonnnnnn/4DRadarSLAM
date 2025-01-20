@@ -41,8 +41,8 @@
   <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="load radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)" >
     <!-- distance filter -->
     <param name="use_distance_filter" value="true" />
-    <param name="distance_near_thresh" value="50" />
-    <param name="distance_far_thresh" value="300.0" />
+    <param name="distance_near_thresh" value="0" />
+    <param name="distance_far_thresh" value="350.0" />
     <param name="z_low_thresh" value="-100.0" />
     <param name="z_high_thresh" value="100.0" />
     <!-- NONE, VOXELGRID(0.1), or APPROX_VOXELGRID -->

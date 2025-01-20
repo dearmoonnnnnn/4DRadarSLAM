@@ -649,8 +649,8 @@ private:
     // 对点云依次进行距离过滤、下采样、离群点去除
     pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter(src_cloud);     
     // filtered = passthrough(filtered);     // 根据高度进行区域截取，distance_filter 函数已包含高度过滤
-    filtered = downsample(filtered);                
-    filtered = outlier_removal(filtered);
+    // filtered = downsample(filtered);                
+    // filtered = outlier_removal(filtered);
 
     // 此处输出为0，由于点云数量稀疏，所有的点都被当成离群点
     // ROS_INFO("After outlier_removal, Received point cloud message with %lu points", filtered->points.size());
