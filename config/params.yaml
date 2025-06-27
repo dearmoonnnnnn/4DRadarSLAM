@@ -5,6 +5,8 @@ radar_slam:
   # pointCloudTopic: "/ars548_process/detection_point_cloud"
 
   
+
+  
   imuTopic: "/livox/imu"                        # IMU data
   odomTopic: "/odom"                            # IMU pre-preintegration odometry, same frequency as IMU
   gpsTopic: "/ublox/fix"                        # GPS odometry topic from navsat, see module_navsat.launch file

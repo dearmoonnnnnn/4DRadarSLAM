@@ -1,0 +1,25 @@
+ <!-- rosbag_play_radar_NWU.launch -->
+
+<!-- This launch file loads rosbags and makes an octomap file -->
+
+<launch>
+
+<!-- <param name="/use_sim_time" value="true"/> -->
+
+<!-- paths to the rosbag files -->
+<arg name="path" default="/home/dearmoon/datasets/NWU/夜雪不颠簸高速/enhancing/"/>
+
+<arg name = "file_0" default = "radar_lidar_output_0.bag"/>
+<arg name = "file_1" default = "radar_lidar_output_5.bag"/>
+
+<!-- Plays the dataset. WARNING: changing 'rate' will cause interactions with the demo.  -->
+<!-- /radar_pcl /radar_trk /ars548_process/detection_point_cloud -->
+<!-- /livox/imu-->
+<node pkg="rosbag" type="play" name="player_radar_graph_slam"
+    args = "--clock --rate=3 --duration=10000
+    $(arg path)$(arg file_0)
+    --topic /radar_merged /livox/imu
+    ">
+</node>
+
+</launch>

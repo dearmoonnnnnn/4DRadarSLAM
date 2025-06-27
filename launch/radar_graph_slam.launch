@@ -199,7 +199,8 @@
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoDiSu3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_one_msg.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiQingBuDianBoGaoSu4.launch" /> -->
-  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiXueBuDianBoGaoSu.launch" />
+  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_RiXueBuDianBoGaoSu.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_NWU_YeQingDianBoDiSu.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->
